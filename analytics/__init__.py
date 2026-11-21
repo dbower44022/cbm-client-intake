@@ -12,6 +12,7 @@ from . import campaigns  # noqa: F401 — prospect marketing's two reads + the C
 from . import dashboard  # noqa: F401 — registers metrics + the seeded system page
 from . import records  # noqa: F401 — registers the per-record starter dashboards
 from . import feedback  # noqa: F401 — feedback surveys' metrics, the Feedback page (phases 8 and 9)
+from . import ambassador  # noqa: F401 — the Ambassador Program page (prds/Ambassador Program)
 from .router import router as api_router
 from .store import AnalyticsStore, MemoryAnalyticsStore, make_analytics_store
 

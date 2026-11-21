@@ -5,6 +5,35 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.360.0] — 2026-11-21
+
+**feat(ambassador): the Ambassador Program, dark behind `AMBASSADOR_PROGRAM`.**
+In place of the Google Form a volunteer proposed (Doug, 11-21-26; decisions
+AM1 to AM7 in `prds/Ambassador Program/`). Members log how they spread the
+word at `/ambassador/`, phone first, signing in on the page itself through
+the new shared sign-in box (`frontend/shared/signin.js`). The email they type
+fills in what the CRM already holds, read as the member; corrections stay on
+the report. Each report is captured in `ambassador_report` (migration 0053)
+before any CRM call and recorded by a resumable chain: an *Ambassador
+Contact* session on every partner, funder and current engagement the contact
+belongs to, with the manager or mentor emailed; a new potential client,
+partner or funder created as a Prospect contact, company, lead (Lead Source
+*Ambassador referral*) and, for a partner or funder, a starting profile,
+credited by **Referred by**; anything else held for the program team's
+review list at `/ambassador/review/`. The client intake form copies Referred
+by onto the new engagement, and the partner and funder forms reuse a
+referred starting profile. Follow-up requests email the program team and add
+a Needs you row; Mark done emails the member. My activity with a 14-day
+correction window; a read-only Ambassador tab in Mentor Administration; an
+Ambassador Program page in Analytics. **Every count of sessions leaves
+Ambassador Contact sessions out** (`core/session_kinds.py`: engagement
+activation, the feedback milestone and closing check, the Analytics session
+metrics, Needs you, the calendar), and a test fails on a new reader that
+forgets. CRM: `crm-plans/ambassador.json`, `scripts/migrate_ambassador_roles.py`,
+`ambassador-activity-crm-handoff.md` — applied nowhere yet. Settings: the
+switch, two team gates, the free-mail domains, the correction window and the
+delivery retry. Owed: `OPEN-ITEMS.md` #91.
+
 ## [0.359.4] — 2026-11-21
 
 **fix(news): Chapter News is published by the marketing team.** Doug,

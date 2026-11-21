@@ -99,6 +99,12 @@ def feedback_viewer(user: dict, settings: Settings) -> bool:
         user, settings.mentor_admin_allowed_teams_list + settings.ops_allowed_teams_list)
 
 
+def ambassador_viewer(user: dict, settings: Settings) -> bool:
+    """The Ambassador Program (PRD § 6): while AMBASSADOR_PROGRAM is on, the
+    program team may open Analytics for the Ambassador Program page."""
+    return bool(settings.ambassador_program) and is_member(user, settings.ambassador_review_teams_list)
+
+
 def _require_user(request: Request, *, admin: bool = False) -> dict:
     user = current_user(request)
     if not user:
@@ -109,7 +115,8 @@ def _require_user(request: Request, *, admin: bool = False) -> dict:
         if admin
         else settings.analytics_view_allowed_teams_list
     )
-    if not is_member(user, teams) and not (not admin and feedback_viewer(user, settings)):
+    if not is_member(user, teams) and not (not admin and (
+            feedback_viewer(user, settings) or ambassador_viewer(user, settings))):
         raise HTTPException(
             status_code=403,
             detail=(

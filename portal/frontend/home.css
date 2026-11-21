@@ -271,3 +271,4 @@ body.home2-on main.portal.cbm-container { padding-top: 0; padding-bottom: 2rem; 
 .home2__past[hidden] { display: none; }
 .home2__past { border-top: 1px solid var(--cbm-panel-border); }
 .home2__digest { display: inline-flex; align-items: center; gap: 6px; margin-left: auto; min-height: 40px; font-size: 13px; color: var(--cbm-text-muted); }
+.home2__ambassador { display: inline-block; margin-top: 0.5rem; text-decoration: none; }

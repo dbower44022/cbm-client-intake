@@ -237,7 +237,18 @@ async def submit_sponsor(sub: SponsorApplication, client: EspoApi) -> dict[str, 
     attr = await attrib.resolve(client, sub, entity=SPONSOR_PROFILE)
     account_id = await _find_or_create_account(sub, client, attr)
     contact_id = await _find_or_create_contact(sub, client, account_id, san, attr)
-    profile_id = await _create_sponsor_profile(sub, client, account_id, contact_id, attr)
+    # The Ambassador Program (PRD § 4.5 item 4): an open referred funder
+    # profile on this company is reused, never a second one beside it.
+    from ambassador import referrals as amb_referrals
+    from core.config import get_settings as _settings
+
+    referred = await amb_referrals.referred_candidate(client, SPONSOR_PROFILE, account_id)
+    if referred is not None:
+        profile_id = await amb_referrals.claim_candidate(
+            client, _settings(), SPONSOR_PROFILE, referred, contact_id,
+            {"description": sub.message.strip()}, person=sub.company)
+    else:
+        profile_id = await _create_sponsor_profile(sub, client, account_id, contact_id, attr)
     # Add the applicant to the profile's Contacts (hasMany), alongside the
     # sponsorContact set on the profile itself.
     await client.relate(SPONSOR_PROFILE, profile_id, SPONSOR_CONTACTS, contact_id)

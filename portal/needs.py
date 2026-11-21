@@ -32,6 +32,8 @@ Closing is left out until a planned end date exists (answer 4).
 
 from __future__ import annotations
 
+from core.session_kinds import is_ambassador
+
 import re
 from datetime import datetime, timedelta, timezone
 from typing import Any, Iterable, Optional
@@ -163,7 +165,7 @@ def session_items(sessions: Iterable[dict[str, Any]], names: dict[str, str],
     the summary field. ``names``: engagement id → the name the page shows."""
     out = []
     for s in sessions:
-        if s.get("status") not in (None, "Completed"):
+        if s.get("status") not in (None, "Completed") or is_ambassador(s):
             continue
         eid = s.get("engagementId")
         when = parse_stamp(s.get("dateStart"))

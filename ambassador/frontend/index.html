@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="cbm-org" content="{{org}}" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{{org}} — Ambassador Activity</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700&family=Roboto+Slab:wght@400;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/shared/tokens.css" />
+  <link rel="stylesheet" href="/shared/panel.css" />
+  <link rel="stylesheet" href="/shared/grid.css" />
+  <link rel="stylesheet" href="/shared/signin.css" />
+  <link rel="stylesheet" href="/ambassador/styles.css" />
+</head>
+<body>
+  <main class="cbm-container am">
+    <header class="am__header">
+      <div>
+        <h1>Ambassador Activity</h1>
+        <p class="am__sub">Tell us how you helped {{org}} reach an entrepreneur, promote an event or build a community relationship. One activity at a time.</p>
+      </div>
+      <div class="am__user" id="userBar" hidden>
+        <span>Signed in as <strong id="whoName"></strong></span>
+        <a class="cbm-action--second" id="reviewLink" href="/ambassador/review/" hidden>Review list</a>
+        <a class="cbm-action--second" href="/">Home</a>
+        <button type="button" class="cbm-action--second" id="logoutBtn">Sign out</button>
+      </div>
+    </header>
+
+    <div id="signin" hidden></div>
+
+    <section id="msgView" class="am__msg" hidden>
+      <p class="am__error" id="msgText" role="alert"></p>
+      <p><a href="/">Return to the home page</a></p>
+    </section>
+
+    <section id="formView" class="am__panel" hidden>
+      <form id="reportForm" novalidate>
+        <div class="am__q">
+          <label class="am__qlabel" for="actDate">When did you do it?</label>
+          <input type="date" id="actDate" class="am__date" />
+        </div>
+
+        <div class="am__q">
+          <p class="am__qlabel" id="actLabel">What did you do?</p>
+          <div class="am__choices am__choices--acts" id="actChoices" role="group" aria-labelledby="actLabel"></div>
+        </div>
+
+        <fieldset class="am__q am__contact" id="contactBlock" hidden>
+          <legend class="am__qlabel" id="contactLegend">Who did you talk to?</legend>
+          <p class="cbm-help">Type their email address and we fill in what we already know. Everything stays editable.</p>
+          <div class="am__grid">
+            <div class="cbm-field">
+              <label for="cEmail">Email address</label>
+              <input type="email" id="cEmail" autocomplete="off" inputmode="email" />
+            </div>
+            <div class="cbm-field am__name">
+              <label for="cFirst">First name</label>
+              <input type="text" id="cFirst" autocomplete="off" />
+            </div>
+            <div class="cbm-field am__name">
+              <label for="cLast">Last name</label>
+              <input type="text" id="cLast" autocomplete="off" />
+            </div>
+            <div class="cbm-field">
+              <label for="cOrg">Organization</label>
+              <input type="text" id="cOrg" autocomplete="off" />
+            </div>
+            <div class="cbm-field">
+              <label for="cTitle">Title</label>
+              <input type="text" id="cTitle" autocomplete="off" />
+            </div>
+            <div class="cbm-field">
+              <label for="cPhone">Phone</label>
+              <input type="tel" id="cPhone" autocomplete="off" />
+            </div>
+          </div>
+          <ul class="am__suggest" id="peopleList" hidden></ul>
+          <div class="am__companies" id="companyPick" hidden>
+            <p class="cbm-help">More than one company uses that email domain. Which one?</p>
+            <div class="am__choices" id="companyChoices"></div>
+          </div>
+          <p class="am__found" id="foundNote" hidden>
+            <span id="foundText"></span>
+            <button type="button" class="am__linkbtn" id="notThisPerson">Not this person</button>
+          </p>
+          <p class="am__member" id="memberNote" role="status" hidden>That's a {{abbr}} member. A fellow member is not recorded as a contact: clear the address, or log the activity without a contact.</p>
+
+          <div class="am__q">
+            <p class="am__qlabel" id="kindLabel">This person is…</p>
+            <div class="am__choices" id="kindChoices" role="group" aria-labelledby="kindLabel"></div>
+          </div>
+          <div class="am__q" id="agreeQ" hidden>
+            <p class="am__qlabel" id="agreeLabel">Did they agree to hear from {{abbr}}?</p>
+            <div class="am__choices" role="group" aria-labelledby="agreeLabel">
+              <button type="button" class="am__choice" data-agree="yes" aria-pressed="false">Yes</button>
+              <button type="button" class="am__choice" data-agree="no" aria-pressed="false">No, or I don't know</button>
+            </div>
+          </div>
+        </fieldset>
+
+        <div class="am__q">
+          <p class="am__qlabel" id="fuLabel">Does {{abbr}} need to follow up?</p>
+          <div class="am__choices" role="group" aria-labelledby="fuLabel">
+            <button type="button" class="am__choice" data-fu="yes" aria-pressed="false">Yes</button>
+            <button type="button" class="am__choice" data-fu="no" aria-pressed="false">No</button>
+          </div>
+        </div>
+
+        <div class="am__q">
+          <label class="am__qlabel" for="note">Anything we should know?</label>
+          <p class="cbm-help" id="noteHelp">An event or organization name helps. Keep client details and confidential mentoring information out of this form.</p>
+          <textarea id="note" rows="4"></textarea>
+        </div>
+
+        <p class="am__error" id="formError" role="alert" hidden></p>
+        <button type="submit" class="cbm-button am__save" id="saveBtn">Save my report</button>
+      </form>
+    </section>
+
+    <section id="doneView" class="am__panel am__done" hidden>
+      <h2>Thank you</h2>
+      <p>Thanks for helping more people discover {{org}}. Your report was saved.</p>
+      <p id="doneFollowUp" hidden>You asked for follow-up: the program team will review it.</p>
+      <p class="cbm-help">Reference <strong id="doneRef"></strong></p>
+      <button type="button" class="cbm-button" id="anotherBtn">Log another activity</button>
+    </section>
+
+    <section id="mineView" class="am__panel" hidden>
+      <h2>My activity</h2>
+      <p class="cbm-help" id="mineHelp"></p>
+      <p class="am__empty" id="mineEmpty" hidden>You have not logged an activity yet.</p>
+      <div class="am__tablewrap">
+        <table class="am__table" id="mineTable" hidden>
+          <thead>
+            <tr>
+              <th data-col="date">Date</th>
+              <th data-col="activity">Activity</th>
+              <th data-col="contact">Contact</th>
+              <th data-col="followup">Follow-up</th>
+              <th data-col="outcome">Referral</th>
+              <th data-col="actions" data-sortable="false"></th>
+            </tr>
+          </thead>
+          <tbody id="mineBody"></tbody>
+        </table>
+      </div>
+      <p class="cbm-help">A contact, company or record created from your report cannot be undone here: ask the program team.</p>
+    </section>
+
+    <div class="am__dialog" id="editDialog" hidden>
+      <div class="am__dialogbox" role="dialog" aria-modal="true" aria-labelledby="editTitle">
+        <h2 id="editTitle">Correct your report</h2>
+        <div class="cbm-field">
+          <label for="editDate">Date</label>
+          <input type="date" id="editDate" />
+        </div>
+        <div class="cbm-field">
+          <label for="editType">Activity</label>
+          <select id="editType"></select>
+        </div>
+        <div class="cbm-field">
+          <label for="editNote">Note</label>
+          <textarea id="editNote" rows="4"></textarea>
+        </div>
+        <p class="am__error" id="editError" role="alert" hidden></p>
+        <div class="am__dialogactions">
+          <button type="button" class="cbm-button" id="editSave">Save correction</button>
+          <button type="button" class="cbm-action--second" id="editCancel">Cancel</button>
+        </div>
+      </div>
+    </div>
+    <footer class="cbm-footer">
+      <p>&copy; <span data-cbm-year>2026</span> {{org}}.<span class="cbm-footer__version" data-cbm-version></span></p>
+    </footer>
+  </main>
+
+  <script src="/shared/busy.js"></script>
+  <script src="/shared/textsize.js"></script>
+  <script src="/shared/grid.js"></script>
+  <script src="/shared/signin.js"></script>
+  <script src="/ambassador/app.js"></script>
+  <script src="/shared/footer.js"></script>
+</body>
+</html>

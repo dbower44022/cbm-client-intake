@@ -118,6 +118,9 @@ RESET_TABLES: tuple[str, ...] = (
     # restore takes away.
     "feedback_send",
     "feedback_alert",
+    # The Ambassador Program's reports: they point at CRM records the
+    # restore takes away.
+    "ambassador_report",
 )
 
 #: Configuration, authored artefacts and instance bookkeeping: never touched.

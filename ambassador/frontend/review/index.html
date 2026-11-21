@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="cbm-org" content="{{org}}" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{{org}} — Ambassador Review</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700&family=Roboto+Slab:wght@400;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/shared/tokens.css" />
+  <link rel="stylesheet" href="/shared/panel.css" />
+  <link rel="stylesheet" href="/shared/grid.css" />
+  <link rel="stylesheet" href="/shared/signin.css" />
+  <link rel="stylesheet" href="/ambassador/styles.css" />
+</head>
+<body>
+  <main class="cbm-container am">
+    <header class="am__header">
+      <div>
+        <h1>Ambassador Review</h1>
+        <p class="am__sub">Follow-up requests from the ambassadors of {{org}}, contacts the system could not place, and corrections ambassadors made to our records.</p>
+      </div>
+      <div class="am__user" id="userBar" hidden>
+        <span>Signed in as <strong id="whoName"></strong></span>
+        <a class="cbm-action--second" href="/ambassador/">Log an activity</a>
+        <a class="cbm-action--second" href="/">Home</a>
+      </div>
+    </header>
+
+    <div id="signin" hidden></div>
+
+    <section id="msgView" class="am__msg" hidden>
+      <p class="am__error" id="msgText" role="alert"></p>
+      <p><a href="/">Return to the home page</a></p>
+    </section>
+
+    <section id="listView" class="am__panel" hidden>
+      <div class="amr__toolbar">
+        <strong id="countText"></strong>
+        <button type="button" class="cbm-action--second" id="refreshBtn">Refresh</button>
+      </div>
+      <p class="am__empty" id="emptyText" hidden>Nothing to review. Every follow-up is done and every contact is placed.</p>
+      <div class="am__tablewrap">
+        <table class="am__table" id="reviewTable" hidden>
+          <thead>
+            <tr>
+              <th data-col="received">Received</th>
+              <th data-col="kinds">Needs</th>
+              <th data-col="ambassador">Ambassador</th>
+              <th data-col="activity">Activity</th>
+              <th data-col="person">Contact</th>
+              <th data-col="organization">Organization</th>
+            </tr>
+          </thead>
+          <tbody id="reviewBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="detailView" class="am__panel" hidden>
+      <h2 id="detailTitle"></h2>
+      <dl class="amr__detail" id="detailList"></dl>
+
+      <div class="amr__section" id="fuSection" hidden>
+        <h3>Follow-up</h3>
+        <div class="cbm-field">
+          <label for="fuNote">What was done</label>
+          <textarea id="fuNote" rows="3"></textarea>
+        </div>
+        <button type="button" class="cbm-button" id="fuDone">Mark follow-up done</button>
+      </div>
+
+      <div class="amr__section" id="contactSection" hidden>
+        <h3>Place this contact</h3>
+        <p class="cbm-help">Link the contact to a record we already have: an ambassador contact session is recorded there and its manager or mentor is told. Or create the person as a new referral, credited to the ambassador.</p>
+        <div class="am__choices" id="linkKinds">
+          <button type="button" class="am__choice" data-kind="partner" aria-pressed="false">A partner</button>
+          <button type="button" class="am__choice" data-kind="funder" aria-pressed="false">A funder</button>
+          <button type="button" class="am__choice" data-kind="client" aria-pressed="false">A client's engagement</button>
+        </div>
+        <div class="cbm-field">
+          <label for="linkSearch">Find the record by name</label>
+          <input type="text" id="linkSearch" autocomplete="off" />
+        </div>
+        <ul class="amr__results" id="linkResults"></ul>
+        <div class="amr__actions">
+          <button type="button" class="cbm-action--second" data-create="client">Create as a new client referral</button>
+          <button type="button" class="cbm-action--second" data-create="partner">Create as a new partner referral</button>
+          <button type="button" class="cbm-action--second" data-create="funder">Create as a new funder referral</button>
+        </div>
+        <div class="cbm-field">
+          <label for="dismissNote">Or dismiss it: why?</label>
+          <input type="text" id="dismissNote" />
+        </div>
+        <button type="button" class="cbm-action--second" id="dismissBtn">Dismiss</button>
+      </div>
+
+      <div class="amr__section" id="correctionSection" hidden>
+        <h3>The ambassador corrected our records</h3>
+        <p class="cbm-help">Our records were not changed. If the ambassador is right, change the contact or company in its own screen, then mark this read.</p>
+        <button type="button" class="cbm-action--second" id="seenBtn">Mark as read</button>
+      </div>
+
+      <p class="am__error" id="detailError" role="alert" hidden></p>
+      <p class="am__found" id="detailOk" role="status" hidden></p>
+      <div class="amr__actions">
+        <button type="button" class="cbm-action--second" id="backBtn">Back to the list</button>
+      </div>
+    </section>
+
+    <footer class="cbm-footer">
+      <p>&copy; <span data-cbm-year>2026</span> {{org}}.<span class="cbm-footer__version" data-cbm-version></span></p>
+    </footer>
+  </main>
+
+  <script src="/shared/busy.js"></script>
+  <script src="/shared/textsize.js"></script>
+  <script src="/shared/grid.js"></script>
+  <script src="/shared/signin.js"></script>
+  <script src="/ambassador/review/review.js"></script>
+  <script src="/shared/footer.js"></script>
+</body>
+</html>

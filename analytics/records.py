@@ -35,6 +35,7 @@ The engagement→client / engagement→company links are also read live by
 """
 
 from __future__ import annotations
+from core.session_kinds import is_ambassador, where_mentoring
 
 from typing import Any, Optional
 
@@ -181,7 +182,7 @@ async def _mentor_sessions_per_month(ctx: MetricContext):
         return series(crm.bucket_by_month([], "dateStart", ctx.time_range))
     recs = await crm.sweep(ctx.espo, "CSession", "dateStart,status", where=[
         {"type": "in", "attribute": "engagementId", "value": ids},
-        _eq("status", COMPLETED),
+        _eq("status", COMPLETED), where_mentoring(),
     ])
     return _months(recs, "dateStart", ctx)
 
@@ -226,7 +227,7 @@ async def _engagement_sessions_completed(ctx: MetricContext):
     rid = _rid(ctx)
     if not rid:
         return _no_record(SHAPE_SCALAR)
-    n = await crm.count(ctx.espo, "CSession", [_eq("engagementId", rid), _eq("status", COMPLETED)])
+    n = await crm.count(ctx.espo, "CSession", [_eq("engagementId", rid), _eq("status", COMPLETED), where_mentoring()])
     return scalar(n, unit="sessions")
 
 
@@ -258,8 +259,8 @@ async def _engagement_days_since_contact(ctx: MetricContext):
 async def _engagement_sessions_per_month(ctx: MetricContext):
     if not _rid(ctx):
         return _no_record(SHAPE_SERIES)
-    recs = await _sessions_for(ctx, "engagementId", "dateStart,status")
-    recs = [r for r in recs if r.get("status") == COMPLETED]
+    recs = await _sessions_for(ctx, "engagementId", "dateStart,status,sessionType")
+    recs = [r for r in recs if r.get("status") == COMPLETED and not is_ambassador(r)]
     return _months(recs, "dateStart", ctx)
 
 
@@ -329,7 +330,7 @@ async def _partner_sessions_completed(ctx: MetricContext):
     if not rid:
         return _no_record(SHAPE_SCALAR)
     n = await crm.count(ctx.espo, "CSession",
-                        [_eq("partnerSessionId", rid), _eq("status", COMPLETED)])
+                        [_eq("partnerSessionId", rid), _eq("status", COMPLETED), where_mentoring()])
     return scalar(n, unit="meetings")
 
 
@@ -484,7 +485,7 @@ async def _contact_sessions_attended(ctx: MetricContext):
     if not rid:
         return _no_record(SHAPE_SCALAR)
     n = await crm.count(ctx.espo, "CSession",
-                        [_linked("sessionAttendees", rid), _eq("status", COMPLETED)])
+                        [_linked("sessionAttendees", rid), _eq("status", COMPLETED), where_mentoring()])
     return scalar(n, unit="meetings")
 
 
@@ -515,7 +516,7 @@ async def _contact_sessions_per_month(ctx: MetricContext):
     if not rid:
         return _no_record(SHAPE_SERIES)
     recs = await crm.sweep(ctx.espo, "CSession", "dateStart,status",
-                           where=[_linked("sessionAttendees", rid), _eq("status", COMPLETED)])
+                           where=[_linked("sessionAttendees", rid), _eq("status", COMPLETED), where_mentoring()])
     return _months(recs, "dateStart", ctx)
 
 
@@ -587,7 +588,7 @@ async def _client_sessions_per_month(ctx: MetricContext):
         return series(crm.bucket_by_month([], "dateStart", ctx.time_range))
     recs = await crm.sweep(ctx.espo, "CSession", "dateStart,status", where=[
         {"type": "in", "attribute": "engagementId", "value": ids},
-        _eq("status", COMPLETED),
+        _eq("status", COMPLETED), where_mentoring(),
     ])
     return _months(recs, "dateStart", ctx)
 
@@ -669,7 +670,7 @@ async def _company_activity_per_month(ctx: MetricContext):
         return series(crm.bucket_by_month([], "dateStart", ctx.time_range))
     recs = await crm.sweep(ctx.espo, "CSession", "dateStart,status", where=[
         {"type": "in", "attribute": "engagementId", "value": ids},
-        _eq("status", COMPLETED),
+        _eq("status", COMPLETED), where_mentoring(),
     ])
     return _months(recs, "dateStart", ctx)
 

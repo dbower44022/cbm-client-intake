@@ -136,12 +136,20 @@ def _apps_for(user: dict[str, Any], settings: Settings) -> list[dict[str, str]]:
     # applied inside the app on top of this).
     if settings.analytics_active and (
             is_member(user, settings.analytics_view_allowed_teams_list)
-            or _analytics_feedback_viewer(user, settings)):
+            or _analytics_feedback_viewer(user, settings)
+            or _analytics_ambassador_viewer(user, settings)):
         apps.append({"title": "Analytics", "url": "/analytics/", "target": "cbm-analytics"})
     # The activity page — every change by a person or in a date range
     # (mentor login integrity step 6). Read per request.
     if settings.activity_page and is_member(user, settings.system_management_allowed_teams_list):
         apps.append({"title": "Activity", "url": "/activity/", "target": "cbm-activity"})
+    # The Ambassador Program (prds/Ambassador Program/ambassador-program-prd.md):
+    # members log activities; the program team reviews. Read per request.
+    if settings.ambassador_program and is_member(user, settings.ambassador_allowed_teams_list):
+        apps.append({"title": "Ambassador Activity", "url": "/ambassador/", "target": "cbm-ambassador"})
+    if settings.ambassador_program and is_member(user, settings.ambassador_review_teams_list):
+        apps.append({"title": "Ambassador Review", "url": "/ambassador/review/",
+                     "target": "cbm-ambassador-review"})
     # Chapter News (prds/home-page-plan.md § 6.2): its own page, shown only
     # to publishers. Read per request.
     if settings.chapter_news and is_member(user, settings.news_publish_allowed_teams_list):
@@ -421,6 +429,11 @@ async def _attention_items(request: Request, user: dict[str, Any],
     if settings.feedback_surveys:
         items.extend(await _feedback_items(user, settings))
 
+    # Ambassador follow-ups (prds/Ambassador Program/ambassador-program-prd.md
+    # § 5.1): the program team's open requests; the row opens the oldest.
+    if settings.ambassador_program and is_member(user, settings.ambassador_review_teams_list):
+        items.extend(await _ambassador_items(settings, user))
+
     store = getattr(request.app.state, "submission_store", None)
     if store is not None and is_member(user, settings.ops_allowed_teams_list):
         try:
@@ -431,6 +444,33 @@ async def _attention_items(request: Request, user: dict[str, Any],
             log.warning("attention count failed (ops) for %s: %s",
                         user.get("userName"), exc)
     return items
+
+
+async def _ambassador_items(settings: Settings, user: dict[str, Any]) -> list[dict[str, Any]]:
+    """The "Ambassador follow-up" row, read under the org-wide key (the
+    program team's role reads every activity; the key spares a 403 for a
+    team whose role is not granted yet). Best-effort."""
+    from ambassador import service as amb
+
+    try:
+        client = amb.key_client(settings)
+        if client is None or not await amb.available(client):
+            return []
+        oldest = await amb.oldest_follow_up(client)
+    except Exception as exc:  # noqa: BLE001 — a row never breaks the portal
+        log.warning("attention count failed (ambassador) for %s: %s", user.get("userName"), exc)
+        return []
+    if not oldest:
+        return []
+    return [{"url": f"/ambassador/review/?activity={oldest['id']}", "kind": "ambassador",
+             "count": oldest["total"], "label": "Ambassador follow-up"}]
+
+
+def _analytics_ambassador_viewer(user: dict[str, Any], settings: Settings) -> bool:
+    """The Analytics tile for the Ambassador Program page's team."""
+    from analytics.router import ambassador_viewer
+
+    return ambassador_viewer(user, settings)
 
 
 def _analytics_feedback_viewer(user: dict[str, Any], settings: Settings) -> bool:
@@ -610,7 +650,7 @@ async def _needs_sessions(settings: Settings, user: dict[str, Any],
         fields = {}
     summary = AI_SUMMARY_FIELD if isinstance(fields, dict) and AI_SUMMARY_FIELD in fields else None
     since = (now - timedelta(days=HOME_SESSION_DAYS_BACK)).strftime("%Y-%m-%d %H:%M:%S")
-    select = "name,status,dateStart,engagementId,sessionNotes,nextSteps" + (f",{summary}" if summary else "")
+    select = "name,status,sessionType,dateStart,engagementId,sessionNotes,nextSteps" + (f",{summary}" if summary else "")
     data = await client.list(
         "CSession",
         select=select,

@@ -81,6 +81,17 @@ class FakeEspo:
                    order_by=None, order=None):
         rows = list(self.data.get(entity, []))
         for c in where or []:
+            if c["type"] == "or":
+                # The CRM's own "or": the sessionType exclusion
+                # (core/session_kinds.where_mentoring) is the one sent here.
+                def _one(r, s):
+                    if s["type"] == "notEquals":
+                        return r.get(s["attribute"]) is not None and r.get(s["attribute"]) != s["value"]
+                    if s["type"] == "isNull":
+                        return r.get(s["attribute"]) is None
+                    return r.get(s["attribute"]) == s.get("value")
+                rows = [r for r in rows if any(_one(r, s) for s in c["value"])]
+                continue
             a, t, v = c["attribute"], c["type"], c.get("value")
             if t == "equals":
                 rows = [r for r in rows if r.get(a) == v]

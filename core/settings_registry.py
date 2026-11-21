@@ -681,6 +681,24 @@ SETTINGS: tuple[SettingSpec, ...] = (
     _s("news_digest_hour", GROUP_FEATURES, "Digest hour", kind="int", component="worker",
        help="The hour the weekly news digest goes out (0 to 23), in the chapter's "
             "own time zone."),
+    _s("ambassador_program", GROUP_FEATURES, "Ambassador Program", kind="bool",
+       component="both",
+       help="The Ambassador Activity page, where members log how they spread the word, "
+            "its review list for the program team, and the worker that records each "
+            "report in the CRM. Stays dark until the CRM has the Ambassador Activity "
+            "record type."),
+    _s("ambassador_free_mail_domains", GROUP_FEATURES, "Ambassador — free email domains",
+       kind="csv",
+       help="Email domains never matched to a company when a member types a contact's "
+            "address, such as gmail.com. Separate them with commas."),
+    _s("ambassador_edit_days", GROUP_FEATURES, "Ambassador — correction window", kind="int",
+       unit="days",
+       help="How many days a member may correct the date, activity and note of their "
+            "own report."),
+    _s("ambassador_delivery_seconds", GROUP_FEATURES, "Ambassador — delivery retry",
+       kind="int", component="worker", unit="seconds",
+       help="How often the worker records reports in the CRM that could not be "
+            "recorded at once."),
     _s("portal_events_window_days", GROUP_FEATURES, "Portal calendar window", kind="int",
        unit="days",
        help="How many days ahead the rail lists in full; events beyond fold behind "
@@ -981,6 +999,13 @@ SETTINGS: tuple[SettingSpec, ...] = (
     _s("news_publish_allowed_teams", GROUP_GATES, "Chapter News — publishers", kind="csv",
        help="The team whose members write and publish Chapter News. Copy the team's "
             "name exactly; administrators always pass."),
+    _s("ambassador_allowed_teams", GROUP_GATES, "Ambassador Activity — members", kind="csv",
+       help="The team whose members log ambassador activities. Copy the team's name "
+            "exactly; administrators always pass."),
+    _s("ambassador_review_teams", GROUP_GATES, "Ambassador Activity — program team",
+       kind="csv",
+       help="The team that receives follow-up requests, works the review list and reads "
+            "the Ambassador Program analytics. Copy the team's name exactly."),
     _s("mentor_profile_allowed_teams", GROUP_GATES, "My Mentor Profile", kind="csv"),
     _s("ops_allowed_teams", GROUP_GATES, "Submission Admin", kind="csv"),
     _s("session_mentor_allowed_teams", GROUP_GATES, "Client Management", kind="csv"),

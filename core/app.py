@@ -66,6 +66,7 @@ DIRECTORY_FRONTEND_DIR = Path(__file__).resolve().parent.parent / "directory" / 
 MYEMAIL_FRONTEND_DIR = Path(__file__).resolve().parent.parent / "myemail" / "frontend"
 ACTIVITY_FRONTEND_DIR = Path(__file__).resolve().parent.parent / "activity" / "frontend"
 NEWS_FRONTEND_DIR = Path(__file__).resolve().parent.parent / "news" / "frontend"
+AMBASSADOR_FRONTEND_DIR = Path(__file__).resolve().parent.parent / "ambassador" / "frontend"
 EVENTS_FRONTEND_DIR = Path(__file__).resolve().parent.parent / "events" / "frontend"
 CAMPAIGNS_FRONTEND_DIR = Path(__file__).resolve().parent.parent / "campaigns" / "frontend"
 CAMPAIGNS_LANDING_DIR = Path(__file__).resolve().parent.parent / "campaigns" / "landing_frontend"
@@ -1135,6 +1136,11 @@ def create_app(
 
         app.include_router(news_member_router)
         app.include_router(news_router)
+        # The Ambassador Program (prds/Ambassador Program/ambassador-program-prd.md).
+        # Always mounted; AMBASSADOR_PROGRAM is read per request.
+        from ambassador import api_router as ambassador_router
+
+        app.include_router(ambassador_router)
         app.include_router(assignments_router)
         app.include_router(ops_router)
         app.include_router(mentoradmin_router)
@@ -1466,6 +1472,12 @@ def create_app(
             "/news",
             BrandedStaticFiles(directory=str(NEWS_FRONTEND_DIR), html=True),
             name="news-frontend",
+        )
+    if settings.assignments_active and AMBASSADOR_FRONTEND_DIR.is_dir():
+        app.mount(
+            "/ambassador",
+            BrandedStaticFiles(directory=str(AMBASSADOR_FRONTEND_DIR), html=True),
+            name="ambassador-frontend",
         )
     if settings.assignments_active and MYEMAIL_FRONTEND_DIR.is_dir():
         app.mount(

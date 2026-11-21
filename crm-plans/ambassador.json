@@ -1,0 +1,321 @@
+{
+  "name": "ambassador",
+  "description": "The Ambassador Program (prds/Ambassador Program/ambassador-program-prd.md § 7; decisions AM1 to AM7, approved by Doug 11-21-26). CAmbassadorActivity: one record per report a member submits, linked to the member's mentor profile and assigned to their login (Multiple Assigned Users), so the Mentor Role's 'own' grant lets them read and correct it. Referred by links on Contact, CEngagement, CPartnerProfile and CSponsorProfile credit a referral. New option values: CSession.sessionType 'Ambassador Contact' (every session count in the application ignores it) and CProspect.leadSource 'Ambassador referral'. Additive only. No field Read-only: the application writes them all (ruling 40). Handoff: ambassador-activity-crm-handoff.md. Role grants: scripts/migrate_ambassador_roles.py.",
+  "entities": [
+    {
+      "name": "AmbassadorActivity",
+      "type": "Base",
+      "labelSingular": "Ambassador Activity",
+      "labelPlural": "Ambassador Activities",
+      "stream": true
+    }
+  ],
+  "entityParams": [
+    {
+      "entity": "CAmbassadorActivity",
+      "params": {
+        "assignedUsers": true,
+        "collaborators": true
+      }
+    }
+  ],
+  "fields": [
+    {
+      "entity": "CAmbassadorActivity",
+      "name": "activityDate",
+      "type": "date",
+      "label": "Activity date",
+      "tooltipText": "When the member did it."
+    },
+    {
+      "entity": "CAmbassadorActivity",
+      "name": "activityType",
+      "type": "enum",
+      "label": "Activity",
+      "options": [
+        "",
+        "Liked or shared a post",
+        "Referred someone",
+        "Invited someone to an event",
+        "Made a community introduction",
+        "Represented us at an event",
+        "Identified a success story"
+      ],
+      "default": "",
+      "tooltipText": "Which of the six activities the member reported."
+    },
+    {
+      "entity": "CAmbassadorActivity",
+      "name": "personKind",
+      "type": "enum",
+      "label": "This person is",
+      "options": [
+        "",
+        "Potential client",
+        "Potential partner",
+        "Potential funder",
+        "Existing organization",
+        "Someone else"
+      ],
+      "default": ""
+    },
+    {
+      "entity": "CAmbassadorActivity",
+      "name": "enteredName",
+      "type": "varchar",
+      "label": "Name entered",
+      "maxLength": 255,
+      "tooltipText": "The contact's name as the member typed it."
+    },
+    {
+      "entity": "CAmbassadorActivity",
+      "name": "enteredEmail",
+      "type": "varchar",
+      "label": "Email entered",
+      "maxLength": 255
+    },
+    {
+      "entity": "CAmbassadorActivity",
+      "name": "enteredOrganization",
+      "type": "varchar",
+      "label": "Organization entered",
+      "maxLength": 255
+    },
+    {
+      "entity": "CAmbassadorActivity",
+      "name": "enteredTitle",
+      "type": "varchar",
+      "label": "Title entered",
+      "maxLength": 100
+    },
+    {
+      "entity": "CAmbassadorActivity",
+      "name": "enteredPhone",
+      "type": "varchar",
+      "label": "Phone entered",
+      "maxLength": 40
+    },
+    {
+      "entity": "CAmbassadorActivity",
+      "name": "corrections",
+      "type": "text",
+      "label": "Corrections to our records",
+      "tooltipText": "What the member changed from what the CRM held. The CRM record itself was not changed."
+    },
+    {
+      "entity": "CAmbassadorActivity",
+      "name": "matchStatus",
+      "type": "enum",
+      "label": "What the system found",
+      "options": [
+        "",
+        "Pending",
+        "Matched",
+        "Created",
+        "Not matched",
+        "More than one match",
+        "Member",
+        "No contact"
+      ],
+      "default": ""
+    },
+    {
+      "entity": "CAmbassadorActivity",
+      "name": "routedTo",
+      "type": "text",
+      "label": "Recorded on",
+      "tooltipText": "Where the application recorded the contact: sessions, new records, credits."
+    },
+    {
+      "entity": "CAmbassadorActivity",
+      "name": "marketingAgreed",
+      "type": "bool",
+      "label": "Agreed to hear from us"
+    },
+    {
+      "entity": "CAmbassadorActivity",
+      "name": "note",
+      "type": "text",
+      "label": "Note"
+    },
+    {
+      "entity": "CAmbassadorActivity",
+      "name": "followUpRequested",
+      "type": "bool",
+      "label": "Follow-up requested",
+      "audited": true
+    },
+    {
+      "entity": "CAmbassadorActivity",
+      "name": "followUpDone",
+      "type": "bool",
+      "label": "Follow-up done",
+      "audited": true
+    },
+    {
+      "entity": "CAmbassadorActivity",
+      "name": "followUpDoneAt",
+      "type": "datetime",
+      "label": "Follow-up done at"
+    },
+    {
+      "entity": "CAmbassadorActivity",
+      "name": "followUpNote",
+      "type": "text",
+      "label": "Follow-up note"
+    },
+    {
+      "entity": "CAmbassadorActivity",
+      "name": "followUpBy",
+      "type": "varchar",
+      "label": "Follow-up done by",
+      "maxLength": 255
+    },
+    {
+      "entity": "CAmbassadorActivity",
+      "name": "reviewOutcome",
+      "type": "enum",
+      "label": "Review outcome",
+      "options": [
+        "",
+        "Linked",
+        "Created",
+        "Dismissed",
+        "Seen"
+      ],
+      "default": ""
+    },
+    {
+      "entity": "CAmbassadorActivity",
+      "name": "reviewNote",
+      "type": "text",
+      "label": "Review note"
+    },
+    {
+      "entity": "CAmbassadorActivity",
+      "name": "reviewedBy",
+      "type": "varchar",
+      "label": "Reviewed by",
+      "maxLength": 255
+    },
+    {
+      "entity": "CAmbassadorActivity",
+      "name": "reviewedAt",
+      "type": "datetime",
+      "label": "Reviewed at"
+    },
+    {
+      "entity": "CAmbassadorActivity",
+      "name": "referralOutcome",
+      "type": "enum",
+      "label": "Referral outcome",
+      "options": [
+        "",
+        "Not yet",
+        "Applied"
+      ],
+      "default": ""
+    },
+    {
+      "entity": "CAmbassadorActivity",
+      "name": "receivedAt",
+      "type": "datetime",
+      "label": "Received"
+    },
+    {
+      "entity": "CAmbassadorActivity",
+      "name": "submissionReference",
+      "type": "varchar",
+      "label": "Reference",
+      "maxLength": 16,
+      "tooltipText": "The application's reference for the report, such as AMB-7K2M9QXA."
+    }
+  ],
+  "links": [
+    {
+      "entity": "CAmbassadorActivity",
+      "link": "mentorProfile",
+      "linkType": "manyToOne",
+      "entityForeign": "CMentorProfile",
+      "linkForeign": "ambassadorActivities",
+      "label": "Ambassador",
+      "labelForeign": "Ambassador activities"
+    },
+    {
+      "entity": "CAmbassadorActivity",
+      "link": "contact",
+      "linkType": "manyToOne",
+      "entityForeign": "Contact",
+      "linkForeign": "ambassadorActivities",
+      "label": "Contact",
+      "labelForeign": "Ambassador activities"
+    },
+    {
+      "entity": "CAmbassadorActivity",
+      "link": "company",
+      "linkType": "manyToOne",
+      "entityForeign": "Account",
+      "linkForeign": "ambassadorActivities",
+      "label": "Company",
+      "labelForeign": "Ambassador activities"
+    },
+    {
+      "entity": "Contact",
+      "link": "referredBy",
+      "linkType": "manyToOne",
+      "entityForeign": "CMentorProfile",
+      "linkForeign": "referredContacts",
+      "label": "Referred by",
+      "labelForeign": "Referred contacts"
+    },
+    {
+      "entity": "CEngagement",
+      "link": "referredBy",
+      "linkType": "manyToOne",
+      "entityForeign": "CMentorProfile",
+      "linkForeign": "referredEngagements",
+      "label": "Referred by (ambassador)",
+      "labelForeign": "Referred engagements"
+    },
+    {
+      "entity": "CPartnerProfile",
+      "link": "referredBy",
+      "linkType": "manyToOne",
+      "entityForeign": "CMentorProfile",
+      "linkForeign": "referredPartners",
+      "label": "Referred by (ambassador)",
+      "labelForeign": "Referred partners"
+    },
+    {
+      "entity": "CSponsorProfile",
+      "link": "referredBy",
+      "linkType": "manyToOne",
+      "entityForeign": "CMentorProfile",
+      "linkForeign": "referredSponsors",
+      "label": "Referred by (ambassador)",
+      "labelForeign": "Referred funders"
+    }
+  ],
+  "enumOptions": [
+    {
+      "entity": "CSession",
+      "field": "sessionType",
+      "add": [
+        "Ambassador Contact"
+      ],
+      "labels": {
+        "Ambassador Contact": "Ambassador Contact"
+      }
+    },
+    {
+      "entity": "CProspect",
+      "field": "leadSource",
+      "add": [
+        "Ambassador referral"
+      ],
+      "labels": {
+        "Ambassador referral": "Ambassador referral"
+      }
+    }
+  ]
+}

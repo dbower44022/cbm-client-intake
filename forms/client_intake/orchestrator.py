@@ -417,6 +417,19 @@ async def submit_intake(sub: IntakeSubmission, client: EspoApi) -> dict[str, str
     # Also add the applicant to the Engagement Contacts (hasMany) link, alongside
     # the primaryEngagementContact set on the engagement itself.
     await client.relate(ENGAGEMENT, engagement_id, ENGAGEMENT_CONTACTS, contact_id)
+    # The Ambassador Program (PRD § 4.4 item 5): a person an ambassador
+    # referred carries Referred by on their Contact; the new engagement gains
+    # it and the ambassador is told. Feature-detected and best-effort.
+    from ambassador import referrals as amb_referrals
+    from core.config import get_settings as _settings
+    from core.resumable import run_step_once
+
+    async def _credit() -> None:
+        await amb_referrals.credit_engagement(
+            client, _settings(), contact_id=contact_id, engagement_id=engagement_id,
+            person=f"{sub.first_name} {sub.last_name}".strip())
+
+    await run_step_once(client, "ambassador-credit", _credit)
     # Ruling 48: the lead the form named is Converted, or a new record gets a
     # lead behind it, Converted at once, its Lead Source this form.
     await attrib.record_lead(client, attr, source=campaign_cfg.SOURCE_MENTOR_REQUEST,

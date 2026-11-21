@@ -17,6 +17,7 @@
   var feedbackEnabled = false; // FEEDBACK_SURVEYS: shows the Feedback tab
   var feedbackOpen = null;     // ?response=<id>: open that response at once (an alert's link)
   var feedbackPanel = null;
+  var ambassadorEnabled = false; // AMBASSADOR_PROGRAM: the read-only Ambassador tab
   var historyPanel = null;    // the CBMHistory panel for the open mentor
   var filter = { q: "", status: "", record: "", type: "" };
 
@@ -82,6 +83,7 @@
     analyticsEnabled = !!user.analyticsEnabled;
     historyEnabled = !!user.historyEnabled && !!window.CBMHistory;
     feedbackEnabled = !!user.feedbackEnabled && !!window.CBMFeedback;
+    ambassadorEnabled = !!user.ambassadorEnabled;
     $("setupBtn").hidden = !isAdmin;
     integrityFaults = !!user.integrityFaults;
     $("faultsBtn").hidden = !integrityFaults;
@@ -613,6 +615,19 @@
       form.appendChild(fpanel);
       feedbackPanel = null;
     }
+    // Ambassador (Ambassador Program PRD § 5.3): the mentor's ambassador
+    // activities, read-only. Reviewing them is the Ambassador Review page's.
+    if (ambassadorEnabled) {
+      var abtn = document.createElement("button");
+      abtn.type = "button"; abtn.className = "ma__tab"; abtn.textContent = "Ambassador";
+      abtn.dataset.tab = "__ambassador"; abtn.setAttribute("role", "tab");
+      abtn.addEventListener("click", function () { activateTab("__ambassador"); loadMentorAmbassador(); });
+      tabs.appendChild(abtn);
+      var apanel = document.createElement("div");
+      apanel.className = "tab-panel"; apanel.dataset.panel = "__ambassador";
+      apanel.id = "maAmbassador";
+      form.appendChild(apanel);
+    }
     // Paste a whole address into Street and it splits across City/State/ZIP.
     // These are the linked Contact's fields; `addressStreet` is a textarea, so
     // a unit ("Suite 200") becomes its second line the way the CRM stores it.
@@ -621,6 +636,48 @@
   }
 
   // --- Feedback tab (feedback surveys, phases 8 and 9) ------------------------
+  // --- Ambassador tab (read-only) ----------------------------------------------
+  function loadMentorAmbassador() {
+    var box = $("maAmbassador");
+    if (!current || !box) return;
+    var id = current.id;
+    box.textContent = "Loading\u2026";
+    var p = fetch("/ambassador/api/mentor/" + encodeURIComponent(id), { credentials: "same-origin" })
+      .then(function (r) {
+        return r.json().catch(function () { return null; }).then(function (d) {
+          if (!r.ok) throw new Error((d && typeof d.detail === "string" && d.detail) || ("The server answered " + r.status + "."));
+          return d;
+        });
+      })
+      .then(function (d) {
+        if (!current || current.id !== id) return;
+        box.textContent = "";
+        if (!d.available) { box.textContent = "The CRM does not have the Ambassador Activity record type yet."; return; }
+        if (!d.rows.length) { box.textContent = "This mentor has not logged an ambassador activity yet."; return; }
+        var table = document.createElement("table");
+        table.className = "ma-amb__table";
+        var head = document.createElement("tr");
+        ["Date", "Activity", "Contact", "Organization", "Follow-up", "Referral", "Note"].forEach(function (h, i) {
+          var th = document.createElement("th"); th.textContent = h; th.dataset.col = "c" + i; head.appendChild(th);
+        });
+        var thead = document.createElement("thead"); thead.appendChild(head); table.appendChild(thead);
+        var tbody = document.createElement("tbody");
+        d.rows.forEach(function (r) {
+          var tr = document.createElement("tr");
+          var fu = r.followUpRequested ? (r.followUpDone ? "Done" : "Requested") : "";
+          [r.activityDate, r.activityType, r.contactName || r.name, r.organization, fu,
+           r.activityType === "Referred someone" ? (r.referralOutcome || "Not yet") : "", r.note]
+            .forEach(function (v) { var td = document.createElement("td"); td.textContent = v || "\u2014"; tr.appendChild(td); });
+          tbody.appendChild(tr);
+        });
+        table.appendChild(tbody);
+        box.appendChild(table);
+        if (window.CBMGrid) CBMGrid.enhance(table, { key: "mentoradmin.ambassador" });
+      })
+      .catch(function (e) { box.textContent = "The ambassador activity could not be read: " + e.message; });
+    if (window.CBMBusy && CBMBusy.loading) CBMBusy.loading(box, p);
+  }
+
   function loadMentorFeedback() {
     if (!current || !$("maFeedback") || !window.CBMFeedback) return;
     var id = current.id;

@@ -77,9 +77,15 @@ class MemoryFeedbackStore:
 
 def _match(row: dict, clause: dict) -> bool:
     t, a, v = clause["type"], clause.get("attribute"), clause.get("value")
+    if t == "or":
+        return any(_match(row, c) for c in v)
     have = row.get(a)
     if t == "equals":
         return have == v
+    if t == "notEquals":
+        return have is not None and have != v
+    if t == "isNull":
+        return have is None
     if t == "in":
         return have in v
     if t == "isTrue":

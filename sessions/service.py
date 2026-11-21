@@ -14,6 +14,8 @@ forbids (see the assignedUserId lesson in assignments.service).
 
 from __future__ import annotations
 
+from core.session_kinds import is_ambassador
+
 from core import engagement_close as ENGAGEMENT_CLOSE
 from core.branding import abbr, render_text
 
@@ -1947,9 +1949,11 @@ async def create_session(
         ).strip()
     if attendee_warning:
         session["warning"] = attendee_warning
-    engagement = await _activate_engagement_on_completed(
-        cfg, client, parent_id, payload.get("status")
-    )
+    engagement = None
+    if not is_ambassador(payload):  # an ambassador contact is not mentoring
+        engagement = await _activate_engagement_on_completed(
+            cfg, client, parent_id, payload.get("status")
+        )
     if engagement is not None:
         session["engagement"] = engagement
     if skip_calendar:
@@ -2037,7 +2041,8 @@ async def update_session(
         parent_id = parent.get(cfg.session_parent_fk)
     # Only a save that CHANGES the status to Completed triggers the engagement
     # activation.
-    if cfg.parent_entity == ENGAGEMENT and payload.get("status") == _SESSION_COMPLETED:
+    if cfg.parent_entity == ENGAGEMENT and payload.get("status") == _SESSION_COMPLETED \
+            and not is_ambassador(session) and not is_ambassador(payload):
         engagement = await _activate_engagement_on_completed(
             cfg, client, parent_id, payload.get("status")
         )

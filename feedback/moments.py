@@ -28,6 +28,7 @@ The sweep also retries follow-up alerts that failed. It never raises.
 """
 
 from __future__ import annotations
+from core.session_kinds import where_mentoring
 
 import logging
 from datetime import datetime, timedelta, timezone
@@ -141,6 +142,7 @@ class Sweep:
             done = await self.client.list(cfg.SESSION, where=[
                 {"type": "equals", "attribute": "engagementId", "value": row["id"]},
                 {"type": "equals", "attribute": "status", "value": cfg.SESSION_COMPLETED},
+                where_mentoring(),
             ], select="id", max_size=1)
             if not (done.get("total") or done.get("list")):
                 continue
@@ -158,6 +160,7 @@ class Sweep:
         earliest = self.since - timedelta(hours=cfg.SESSION_WAIT_HOURS)
         recent = await _all(self.client, cfg.SESSION, [
             {"type": "equals", "attribute": "status", "value": cfg.SESSION_COMPLETED},
+                where_mentoring(),
             {"type": "after", "attribute": "dateStart", "value": crm_stamp(earliest)},
             {"type": "before", "attribute": "dateStart", "value": crm_stamp(latest)},
         ], "id,engagementId,dateStart")
@@ -165,6 +168,7 @@ class Sweep:
             done = await _all(self.client, cfg.SESSION, [
                 {"type": "equals", "attribute": "engagementId", "value": eng_id},
                 {"type": "equals", "attribute": "status", "value": cfg.SESSION_COMPLETED},
+                where_mentoring(),
             ], "id,dateStart", order_by="dateStart")
             starts = sorted(d for d in (parse_crm(r.get("dateStart")) for r in done) if d)
             if len(starts) < count:

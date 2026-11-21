@@ -209,6 +209,8 @@ async def session(request: Request) -> dict:
         "historyEnabled": history.history_on(),
         # True => the Feedback tab (feedback surveys, phases 8 and 9).
         "feedbackEnabled": get_settings().feedback_surveys,
+        # The Ambassador tab (Ambassador Program PRD § 5.3), read-only.
+        "ambassadorEnabled": get_settings().ambassador_program,
     }
 
 

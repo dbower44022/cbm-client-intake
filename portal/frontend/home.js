@@ -828,6 +828,15 @@
     var greetLine = el("p", null, today(now));
     greet.appendChild(greetLine);
     state.greet = { line: greetLine, now: now, sessions: null, needs: null };
+    // The Ambassador Program's quick way in (PRD § 3.1): shown when the
+    // member's applications include the activity page.
+    var amb = (data.apps || []).filter(function (a) { return a.url === "/ambassador/"; })[0];
+    if (amb) {
+      var ambLink = el("a", "cbm-button home2__ambassador", "Log an activity");
+      ambLink.href = amb.url;
+      ambLink.target = amb.target || "cbm-ambassador";
+      greet.appendChild(ambLink);
+    }
     main.appendChild(greet);
 
     var pair = el("div", "home2__pair");

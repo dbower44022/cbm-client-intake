@@ -102,6 +102,12 @@ async def sync_session_calendar(
     """
     if not getattr(settings, "gcal_events", False):
         return {"ok": False, "disabled": True}
+    # An ambassador contact is a record of a meeting that happened, never a
+    # calendar event (core/session_kinds.py).
+    from core.session_kinds import is_ambassador
+
+    if is_ambassador(session) or is_ambassador(changes):
+        return {"ok": True, "skipped": True}
     try:
         from comms.service import get_service_account  # shared, process-cached
 

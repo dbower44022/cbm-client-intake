@@ -103,7 +103,7 @@ AREAS: tuple[Area, ...] = (
     )),
     Area(AREA_STAFF, (
         _h("Staff and mentor tools",
-           "assignments_enabled home_v2 home_no_contact_days chapter_news news_digest news_digest_weekday news_digest_hour record_quick_add record_history_tab activity_page "
+           "assignments_enabled home_v2 home_no_contact_days chapter_news news_digest news_digest_weekday news_digest_hour ambassador_program ambassador_free_mail_domains ambassador_edit_days ambassador_delivery_seconds record_quick_add record_history_tab activity_page "
            "mentor_preview_shared grants_enabled",
            lead="assignments_enabled"),
         _h("Mentor logins",
@@ -159,7 +159,7 @@ AREAS: tuple[Area, ...] = (
     Area(AREA_GATES, (
         _h("Who can open each application",
            "assign_allowed_teams assign_allowed_roles mentor_admin_allowed_teams "
-           "system_management_allowed_teams news_publish_allowed_teams mentor_profile_allowed_teams ops_allowed_teams "
+           "system_management_allowed_teams news_publish_allowed_teams ambassador_allowed_teams ambassador_review_teams mentor_profile_allowed_teams ops_allowed_teams "
            "session_mentor_allowed_teams session_partner_allowed_teams session_sponsor_allowed_teams "
            "workspace_allowed_teams events_allowed_teams campaigns_allowed_teams "
            "analytics_view_allowed_teams analytics_admin_allowed_teams"),

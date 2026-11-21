@@ -946,6 +946,26 @@ class Settings(BaseSettings):
     news_digest: bool = False
     news_digest_weekday: int = 0
     news_digest_hour: int = 8
+    # --- The Ambassador Program (prds/Ambassador Program/ambassador-program-prd.md) ---
+    # The activity page (/ambassador/), its review list, the portal tile, the
+    # home page button and the worker's delivery of each report. Stays dark
+    # until the CRM has CAmbassadorActivity (detected from metadata). Read per
+    # request and per worker pass.
+    ambassador_program: bool = False
+    # Who may log activities (AM6: every mentor) and who answers them: the
+    # follow-up alerts, the review list and the analytics page (AM4, AM6).
+    ambassador_allowed_teams: str = "Mentor Team"
+    ambassador_review_teams: str = "Marketing Admin Team"
+    # Email domains never matched to a company (AM3a item 1).
+    ambassador_free_mail_domains: str = (
+        "gmail.com,googlemail.com,yahoo.com,ymail.com,outlook.com,hotmail.com,live.com,"
+        "msn.com,icloud.com,me.com,mac.com,aol.com,comcast.net,sbcglobal.net,att.net,"
+        "verizon.net,protonmail.com,proton.me,gmx.com,mail.com,zoho.com,roadrunner.com,"
+        "charter.net,cox.net,bellsouth.net,frontier.com,windstream.net,earthlink.net")
+    # How many days a mentor may correct their own entry (AM7).
+    ambassador_edit_days: int = 14
+    # How often the worker delivers reports the web could not (seconds).
+    ambassador_delivery_seconds: int = 60
     # --- F5: the portal calendar (prds/events/CBM_Events_Portal_Calendar_Design.md) ---
     # The rail of upcoming events on the portal home page and the member page
     # behind it. Off by default so crm-test can show it to a real member first:
@@ -1155,6 +1175,19 @@ class Settings(BaseSettings):
     @property
     def assign_allowed_roles_list(self) -> list[str]:
         return [r.strip() for r in self.assign_allowed_roles.split(",") if r.strip()]
+
+    @property
+    def ambassador_allowed_teams_list(self) -> list[str]:
+        return [t.strip() for t in self.ambassador_allowed_teams.split(",") if t.strip()]
+
+    @property
+    def ambassador_review_teams_list(self) -> list[str]:
+        return [t.strip() for t in self.ambassador_review_teams.split(",") if t.strip()]
+
+    @property
+    def ambassador_free_mail_domains_set(self) -> frozenset[str]:
+        return frozenset(d.strip().lower().lstrip("@") for d in
+                         self.ambassador_free_mail_domains.split(",") if d.strip())
 
     @property
     def news_publish_allowed_teams_list(self) -> list[str]:

@@ -265,7 +265,22 @@ async def submit_partner(sub: PartnerApplication, client: EspoApi) -> dict[str, 
     attr = await attrib.resolve(client, sub, entity=PARTNER_PROFILE)
     account_id = await _find_or_create_account(sub, client, attr)
     contact_id = await _find_or_create_contact(sub, client, account_id, san, attr)
-    profile_id = await _create_partner_profile(sub, client, account_id, contact_id, san, attr)
+    # The Ambassador Program (PRD § 4.5 item 4): an open referred partner
+    # profile on this company is reused, never a second one beside it.
+    from ambassador import referrals as amb_referrals
+    from core.config import get_settings as _settings
+
+    referred = await amb_referrals.referred_candidate(client, PARTNER_PROFILE, account_id)
+    if referred is not None:
+        fill: dict = {}
+        if sub.partnership_type:
+            fill[P_TYPE] = await san.enum(PARTNER_PROFILE, P_TYPE, sub.partnership_type)
+        if sub.partnership_value:
+            fill[P_VALUE] = await san.multi(PARTNER_PROFILE, P_VALUE, sub.partnership_value)
+        profile_id = await amb_referrals.claim_candidate(
+            client, _settings(), PARTNER_PROFILE, referred, contact_id, fill, person=sub.company)
+    else:
+        profile_id = await _create_partner_profile(sub, client, account_id, contact_id, san, attr)
     # Add the applicant to the profile's Contacts (hasMany), alongside the
     # primaryPartnercontact set on the profile itself.
     await client.relate(PARTNER_PROFILE, profile_id, PARTNER_CONTACTS, contact_id)

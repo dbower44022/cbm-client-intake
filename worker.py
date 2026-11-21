@@ -347,6 +347,8 @@ async def main() -> None:
     # time booked under the old interval (an hour) would otherwise hold
     # (found on the Association 11-21-26).
     last_feedback_sweep: Optional[datetime] = None
+    # The Ambassador Program's delivery retries (PRD § 4.1).
+    next_ambassador = datetime.now(timezone.utc)
 
     # Intake-receipt reconciliation (Doug's 2026-07-27 redesign): converge
     # every row's CIntakeSubmission receipt — the guarantee behind "the CRM is
@@ -950,6 +952,19 @@ async def main() -> None:
                 except Exception as exc:  # noqa: BLE001 — never crashes delivery
                     log.warning("feedback sweep failed: %s", exc)
                 last_feedback_sweep = now
+        # The Ambassador Program: reports the web could not record at once
+        # are recorded here, with backoff. Never fails the loop.
+        if settings.ambassador_program and settings.store_enabled \
+                and settings.ambassador_delivery_seconds > 0 and now >= next_ambassador \
+                and not settings.espo_dry_run and settings.espo_api_key:
+            try:
+                from ambassador.runner import run_cycle as _amb_cycle
+                from ambassador.store import report_store as _amb_store
+
+                await _amb_cycle(settings, _amb_store(settings), _client(settings))
+            except Exception as exc:  # noqa: BLE001 — never crashes delivery
+                log.warning("ambassador delivery pass failed: %s", exc)
+            next_ambassador = now + timedelta(seconds=settings.ambassador_delivery_seconds)
         if sandbox_on and now >= next_sandbox:
             try:
                 from core.sandbox_reset import reset_app_tables

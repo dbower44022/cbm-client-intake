@@ -722,6 +722,23 @@ BE29 to BE33, v0.354.0, dark behind `FEEDBACK_SURVEYS`; **detail:
 automatic moments in the worker and a Feedback page in Analytics. Mentors
 read their own responses and see no figures.
 
+### The Ambassador Program — `/ambassador`
+
+Members log how they spread the word; each report is recorded on the right
+partner, funder or client, and referrals are credited (decisions AM1 to AM7,
+`prds/Ambassador Program/`). Dark behind `AMBASSADOR_PROGRAM`. **Detail:
+`ambassador/CLAUDE.md`.** Rules other packages rely on:
+
+- **"Ambassador Contact" sessions are never mentoring**: every count of
+  sessions goes through `core/session_kinds.py`, and a test fails on a
+  module that reads `CSession` without it.
+- **Referred by** on Contact, CEngagement, CPartnerProfile and
+  CSponsorProfile: the client intake delivery copies it onto the new
+  engagement, and the partner and funder deliveries reuse a referred
+  starting profile (`ambassador/referrals.py`; feature-detected,
+  best-effort).
+- **The shared sign-in box** is `frontend/shared/signin.js`.
+
 ## Cross-cutting subsystems
 
 ### Email
@@ -1113,6 +1130,7 @@ publishing refused.
 | `submission-admin.md` | `/ops` work queue, resolution workflow, conversations |
 | `analytics-guide.md` / `ANALYTICS-SETUP.md` | Analytics user guide / activation runbook |
 | `event-administration.md` / `EVENTS-SETUP.md` | Events staff guide / activation + 20-min test script |
+| `ambassador-program.md` / `ambassador-activity-crm-handoff.md` | Ambassador Program staff guide / its CRM build |
 | `GDRIVE-DOCS-SETUP.md`, `GCAL-GOOGLE-SETUP.md`, `GMAIL-INTEGRATION-GUIDE.md` | Google integration activation runbooks |
 | `prds/CBM_Client_Intake_Requirements_Specification.md` | What the client-intake process must do (the formal spec) |
 | `prds/CBM_Client_Intake_Technical_Design.md` | How it is built — deployment §6, open issues §7, EspoCRM mapping §3 |
@@ -1393,4 +1411,7 @@ the strength of it.
 - **v0.356.5 (2026-11-20) is live everywhere** (pushed 11-20-26 23:23): an
   invented training address gets a plain calendar note. Owed: the check as
   Joe Mentor on the Association (a Completed session with a next date).
+- **v0.360.0 (2026-11-21) is committed, not pushed**: the Ambassador
+  Program, dark behind `AMBASSADOR_PROGRAM`; no CRM has its record type
+  yet. Owed in #91.
 Everything else still owed is in `OPEN-ITEMS.md`.

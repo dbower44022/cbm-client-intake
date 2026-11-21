@@ -1,6 +1,6 @@
 # Ambassador Program — product requirements (build document)
 
-Last Updated: 11-21-26 02:24 · Revision 0.1 · Status: draft for Doug's review
+Last Updated: 11-21-26 03:01 · Revision 0.2 · Status: approved 11-21-26; built as v0.360.0
 
 This is an implementation document for the cbm-client-intake applications,
 so it names the CRM (EspoCRM) and its record types. The decisions behind it
@@ -73,6 +73,7 @@ is built for a phone first: large tap targets, the date defaulting to today.
 
 | # | Question | Shown when | Required | Notes |
 |---|---|---|---|---|
+| 0.2 | 11-21-26 03:01 | Claude (Claude Code) | § 14 approved; § 15 records the build's differences. |
 | 1 | When did you do it? | always | yes | Date only, the shared date control's date half; defaults to today; not in the future |
 | 2 | What did you do? | always | yes | Six large buttons, § 3.3 |
 | 3 | Who did you talk to? | every activity except "liked or shared a post" | for a referral, yes; otherwise optional | The contact block, § 3.4 |
@@ -588,6 +589,37 @@ tests, and committed locally; Doug reviews and pushes.
 6. **Mentor Administration's read-only Ambassador tab** (§ 5.3).
 7. **The edit window is 14 days** (§ 3.5).
 8. **The page name** "Ambassador Activity" at `/ambassador/`.
+
+## 15. As built (v0.360.0, 11-21-26)
+
+Doug approved § 14's eight items as written on 11-21-26 and asked for the
+whole build in one session, checked when done: the phase stops in § 13 were
+not used. Where the build differs from this document, and why:
+
+1. **The portal's own sign-in is not moved onto the shared box yet.** The
+   activity page and the review page use `frontend/shared/signin.js`; the
+   portal keeps its markup. Moving it touches the sign-in every member uses,
+   so it waits for Doug's go-ahead (`OPEN-ITEMS.md` #91).
+2. **A referred funder starts Prospective, not Candidate** (§ 4.5): the
+   funder status already has Prospective for "being approached", so the CRM
+   needs no new value. A referred partner starts Candidate.
+3. **No Source field on partner and funder profiles** (§ 7.2): a referred
+   starting profile is recognised by Referred by, no manager and its
+   starting status, which is enough for the reuse rule.
+4. **No partner-association tie** (§ 4.5 item 2): creating a partner or
+   funder profile for a company ties it to no business; `core/partner_links.py`
+   governs ties between a partner and a business, and none is made here.
+5. **The action log points at the ambassador's mentor profile** with the
+   activity's id in its details: the action log's record link cannot name
+   an Ambassador Activity.
+6. **A referral needs an email to be created** (§ 4.2): with no email the
+   person waits on the review list, so a later application can find them.
+7. **The analytics page's team gate is the Analytics Admin Team and the
+   Marketing Admin Team**, the review setting's default; the program team
+   also reaches Analytics through `AMBASSADOR_REVIEW_TEAMS` while the switch
+   is on.
+8. **Delivery**: the web tries once at save time; the worker retries every
+   `AMBASSADOR_DELIVERY_SECONDS` (default 60).
 
 ## Change log
 
