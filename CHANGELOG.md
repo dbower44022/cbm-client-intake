@@ -5,6 +5,23 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.362.1] — 2026-11-21
+
+**fix(email): Cancel closes the email window.** Found by Doug in Client
+Administration (11-21-26): after Assign, the email to the mentor opens with
+the MentorAssignmentNotice template, and Cancel seemed to do nothing. It
+showed one small line of text at the far left, "Discard this draft?", with
+two choices that did not look like buttons, and a second Cancel did nothing.
+The shared email window (`frontend/shared/quickmail.js`, every quick-compose
+in the staff applications) now:
+
+- closes at once on Cancel (or Escape) when the email is as it opened,
+  template included, and keeps no draft of it;
+- asks before discarding an email that was changed, with **Discard draft**
+  and **Keep writing** as real buttons, and discards on a second Cancel.
+
+Checked with real clicks on a local page with the server calls stubbed.
+
 ## [0.362.0] — 2026-11-21
 
 **feat(courses): the training application, phase 1 — the course page.**

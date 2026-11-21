@@ -198,6 +198,9 @@
       ".qm-attach-total{margin:2px 0 0;color:var(--cbm-muted,#4a5568);font-size:.8rem}" +
       ".qm-err{color:var(--cbm-danger,#c53030);font-size:.85rem;margin:0}" +
       ".qm-warn-msg{color:#744210;font-size:.85rem;margin:0}" +
+      ".qm-discard-note{display:flex;flex-wrap:wrap;align-items:center;gap:8px;font-size:.95rem;font-weight:600}" +
+      ".qm-foot .qm-discard-btn{background:#B91C1C;color:#fff;border-color:#B91C1C}" +
+      ".qm-foot .qm-keep-btn{background:#fff;color:#1F2937;border-color:#9CA3AF}" +
       ".qm-ok{color:#2f855a;font-size:.9rem;margin:6px 0 0}" +
       ".qm-foot{flex:0 0 auto;display:flex;gap:10px;align-items:center;justify-content:flex-end;" +
       "padding:10px 22px 14px;border-top:1px solid var(--cbm-border,#e6eaef)}" +
@@ -351,6 +354,18 @@
     function draftHasContent() {
       return !!(subjInput.value.trim() || !bodyIsEmpty() || localAttachments.length);
     }
+    // What the window opened with, once an opening template has filled it
+    // (opts.template). Cancel closes at once while the email still matches
+    // it: an untouched template email is not a draft worth asking about
+    // (Doug, 11-21-26: Cancel after Assign seemed to do nothing).
+    var openedWith = null;
+    function snapshot() {
+      return [subjInput.value, String(bodyValue() || ""), localAttachments.length,
+              templateAttachments.length].join("\u0001");
+    }
+    function draftChanged() {
+      return draftHasContent() && (openedWith === null || snapshot() !== openedWith);
+    }
 
     // --- template combobox behavior ---
     var tplAll = [], tplVisible = [], tplActive = -1, preTplSnapshot = null;
@@ -459,7 +474,7 @@
             tplNote.className = "qm-note qm-warn";
             tplNote.hidden = false;
           }
-          markEdited();
+          if (silent) openedWith = snapshot(); else markEdited();
         })
         .catch(function (e) {
           // ET-114: non-destructive — the existing draft stays untouched.
@@ -610,7 +625,7 @@
       body.insertBefore(note, body.firstChild);
     }
     activeGuard = {
-      dirty: draftHasContent,
+      dirty: draftChanged,
       discard: function () {
         if (draftTimer) { clearTimeout(draftTimer); draftTimer = null; }
         clearDraft(toAddress);
@@ -716,15 +731,21 @@
     send.addEventListener("click", doSend);
 
     function requestClose() {
-      if (!activeGuard || !activeGuard.dirty()) { closeDialog(); return; }
-      // Styled two-step confirm inside the dialog (no browser confirm).
-      if (foot.querySelector(".qm-discard-note")) return;
+      if (!activeGuard || !activeGuard.dirty()) {
+        if (activeGuard) activeGuard.discard();
+        closeDialog(); return;
+      }
+      // Styled two-step confirm inside the dialog (no browser confirm). A
+      // second Cancel while it shows discards, so Cancel never seems dead.
+      if (foot.querySelector(".qm-discard-note")) {
+        activeGuard.discard(); closeDialog(); return;
+      }
       var note = document.createElement("span"); note.className = "qm-discard-note qm-warn-msg";
-      note.textContent = "Discard this draft? It stays saved unless you discard it. ";
+      note.textContent = "Discard this email? It stays saved as a draft unless you discard it. ";
       var discard = document.createElement("button"); discard.type = "button";
-      discard.className = "qm-cancel"; discard.textContent = "Discard draft";
+      discard.className = "qm-discard-btn"; discard.textContent = "Discard draft";
       var keep = document.createElement("button"); keep.type = "button";
-      keep.className = "qm-cancel"; keep.textContent = "Keep writing";
+      keep.className = "qm-keep-btn"; keep.textContent = "Keep writing";
       discard.addEventListener("click", function () {
         if (activeGuard) activeGuard.discard();
         closeDialog();
