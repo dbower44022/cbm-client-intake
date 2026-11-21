@@ -1,6 +1,6 @@
 # Kickoff prompt — pin the CRM server's NGINX image (CRMBuilder)
 
-Last Updated: 11-20-26 23:26 · Revision 0.1 (draft for Doug's approval)
+Last Updated: 11-21-26 00:10 · Revision 0.2 (approved by Doug 11-21-26)
 
 > Opening answer: Define and build a fix so a newly installed CRM server pins its NGINX image to an exact version instead of the bare `nginx` image.
 
@@ -47,4 +47,5 @@ CRMBuilder does not write the NGINX image itself. It runs EspoCRM's own installe
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.2 | 11-21-26 00:10 | Claude (Claude Code, cbm-client-intake session) | Approved by Doug ("run" it, 11-21-26); no content change. |
 | 0.1 | 11-20-26 23:26 | Claude (Claude Code, cbm-client-intake session) | First draft, written after the five servers were patched by hand. |
