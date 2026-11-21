@@ -5,6 +5,26 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.356.5] — 2026-11-20
+
+**fix(sessions): an invented training address gets a plain note, not
+Google's raw error** (Doug's ruling 11-20-26, option A).
+
+- **What happened**: on the Association's system, Joe Mentor
+  (`joe.mentor@bma.test`) saved a Completed session with a next date, and the
+  follow-up's calendar invitation failed with `invalid_grant: Invalid email
+  or User ID` and the advice "open it and re-save to retry". `bma.test` has
+  no Google accounts, so no retry could ever work.
+- **`sessions/gcal._client_for_user`** now checks the mentor's mailbox
+  against the Sandbox address domain (`core/sandbox_addresses.py`) before
+  calling Google. A match returns `disabled` with `sandbox` and a `note`;
+  the Client, Partner and Funder Management screens show "no calendar event:
+  … is an invented training address (on bma.test) …" as a success, with no
+  retry advice. The time picker's busy shading degrades quietly, as it does
+  for a mentor with no mailbox.
+- An empty setting (production, crm-test) changes nothing.
+
+
 ## [0.356.4] — 2026-11-20
 
 **fix(ops): a script that patches each CRM server against NGINX2Root

@@ -8579,6 +8579,8 @@
           warnExtra += " (The new session's calendar invitation failed: " + (fcal.error || "unknown error") + " — open it and re-save to retry.)";
         } else if (fcal && fcal.ok && fcal.declined) {
           engExtra += " No calendar invite was sent for it.";
+        } else if (fcal && fcal.sandbox) {
+          engExtra += " No calendar event was made for it: " + fcal.note + ".";
         }
         if (fu.warning) warnExtra += " " + fu.warning;
       } else if (fu && fu.created === false) {
@@ -8595,6 +8597,8 @@
         msg = "Session saved — the calendar event was cancelled.";
       } else if (cal && cal.ok && cal.updated) {
         msg = "Session saved — the calendar event was updated.";
+      } else if (cal && cal.sandbox) {
+        msg = "Session saved — no calendar event: " + cal.note + ".";
       } else if (cal && cal.ok && cal.declined) {
         msg = "Session saved — no calendar invite was created (schedule the meeting manually).";
       } else {

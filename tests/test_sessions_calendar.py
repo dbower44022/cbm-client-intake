@@ -665,3 +665,46 @@ async def test_busy_no_cbm_mailbox_degrades(monkeypatch):
     out = await gcal.calendar_busy(SETTINGS_ON, crm, "u1", *WINDOW)
     assert out == {"available": False, "busy": []}
     assert cal.listed == []
+
+
+# --- invented training addresses (core/sandbox_addresses.py) ---------------
+
+SETTINGS_SANDBOX = types.SimpleNamespace(
+    gcal_events=True, request_timeout_seconds=5, sandbox_address_domain="bma.test")
+
+
+def _sandbox_crm():
+    crm = _fake_crm()
+    crm.records[("CMentorProfile", "mp1")] = {"cbmEmail": "joe.mentor@bma.test"}
+    return crm
+
+
+async def test_sandbox_mailbox_makes_no_event_and_says_so(monkeypatch):
+    """Google has no account for an invented training address, so the hook
+    never calls it: a plain note, marked disabled (no failure, no retry advice)."""
+    crm, cal = _sandbox_crm(), FakeCalendar()
+    _wire(monkeypatch, cal)
+    session = await service.create_session(
+        MENTOR, crm, "E1", dict(NEW_CHANGES), owner_user_id="u1", settings=SETTINGS_SANDBOX)
+    out = session["calendar"]
+    assert out["ok"] is False and out["disabled"] is True and out["sandbox"] is True
+    assert "joe.mentor@bma.test is an invented training address (on bma.test)" in out["note"]
+    assert "error" not in out
+    assert cal.created == []
+
+
+async def test_sandbox_domain_empty_changes_nothing(monkeypatch):
+    crm, cal = _sandbox_crm(), FakeCalendar()
+    _wire(monkeypatch, cal)
+    session = await service.create_session(
+        MENTOR, crm, "E1", dict(NEW_CHANGES), owner_user_id="u1", settings=SETTINGS_ON)
+    assert session["calendar"]["ok"] is True
+    assert len(cal.created) == 1 and cal.mailbox == "joe.mentor@bma.test"
+
+
+async def test_sandbox_mailbox_busy_lookup_degrades_quietly(monkeypatch):
+    crm, cal = _sandbox_crm(), FakeCalendar(events=BUSY_EVENTS)
+    _wire(monkeypatch, cal)
+    out = await gcal.calendar_busy(SETTINGS_SANDBOX, crm, "u1", *WINDOW)
+    assert out == {"available": False, "busy": []}
+    assert cal.listed == []

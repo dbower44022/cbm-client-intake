@@ -279,6 +279,21 @@ async def _client_for_user(
             "ok": False,
             "error": f"your profile has no {abbr()} email address, so no calendar event was created",
         }
+    # An invented training address has no Google account, so delegation can
+    # only fail with Google's raw "invalid_grant". Say so plainly instead, and
+    # mark it ``disabled`` so the screen shows no failure and no retry advice
+    # — a retry can never succeed (core/sandbox_addresses.py).
+    from core.sandbox_addresses import is_sandbox_address, sandbox_domain
+
+    domain = sandbox_domain(settings)
+    if is_sandbox_address(mailbox, domain):
+        return {
+            "ok": False,
+            "disabled": True,
+            "sandbox": True,
+            "note": (f"{mailbox} is an invented training address (on {domain}), "
+                     f"so no Google Calendar event is made for it"),
+        }
     return CalendarClient(sa_info, mailbox, getattr(settings, "request_timeout_seconds", 20))
 
 

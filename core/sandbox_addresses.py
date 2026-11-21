@@ -2,11 +2,14 @@
 
 A deployment that holds invented training data names the domain its invented
 addresses sit on in ``SANDBOX_ADDRESS_DOMAIN`` (System Settings → Email). The
-domain has no mailboxes, so a mentor's own send or calendar invitation already
-fails at Google. This module stops the paths that do NOT go out as the
-mentor's own address: a send as the shared mailbox, a Drive share, a Google
-group membership and the mailing service's lists. Each of those four calls
-:func:`is_sandbox_address` at the last step before it reaches outside.
+domain has no mailboxes, so a mentor's own send already fails at Google. This
+module stops the paths that do NOT go out as the mentor's own address: a send
+as the shared mailbox, a Drive share, a Google group membership and the
+mailing service's lists. Each of those four calls :func:`is_sandbox_address`
+at the last step before it reaches outside. A session's calendar event,
+which does go out as the mentor's own address, checks it too
+(``sessions/gcal._client_for_user``), so a trainee reads a plain note rather
+than Google's raw ``invalid_grant`` and advice to retry.
 
 Why a setting and not the CRM's address: the Business Mentors Association's
 system is a real chapter AND the training system (Association rulings 72 and
