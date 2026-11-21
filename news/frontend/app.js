@@ -450,22 +450,48 @@
     }
   }
 
-  // --- the editor ---------------------------------------------------------------
+  // --- the create and edit pop-up (stop 2; ruling R1) ----------------------------
+  // One form for Create, Edit and Duplicate. A save closes it and returns to
+  // the grid with the row selected; closing with changes asks first.
   function drawTeams(chosen) {
     var box = $("fTeams");
     box.innerHTML = "";
+    var every = el("button", "nw__teamchip", EVERY);
+    every.type = "button"; every.dataset.every = "1";
+    box.appendChild(every);
+    state.teams.forEach(function (t) {
+      var b = el("button", "nw__teamchip", t);
+      b.type = "button"; b.dataset.team = t;
+      box.appendChild(b);
+    });
+    setTeams(chosen);
     if (!state.teams.length) {
       box.appendChild(el("p", "nw__hint", "The CRM offers no teams, so the item goes to every member."));
-      return;
     }
-    state.teams.forEach(function (t) {
-      var lab = el("label", "nw__team");
-      var cb = el("input"); cb.type = "checkbox"; cb.value = t; cb.checked = chosen.indexOf(t) >= 0;
-      cb.addEventListener("change", preview);
-      lab.appendChild(cb);
-      lab.appendChild(document.createTextNode(" " + t));
-      box.appendChild(lab);
+  }
+  function setTeams(chosen) {
+    $("fTeams").querySelectorAll(".nw__teamchip").forEach(function (b) {
+      var on = b.dataset.every ? !chosen.length : chosen.indexOf(b.dataset.team) >= 0;
+      b.setAttribute("aria-pressed", on ? "true" : "false");
     });
+  }
+  function chosenTeams() {
+    var out = [];
+    $("fTeams").querySelectorAll(".nw__teamchip[data-team][aria-pressed='true']").forEach(function (b) {
+      out.push(b.dataset.team);
+    });
+    return out;
+  }
+  function onTeamClick(ev) {
+    var b = ev.target.closest(".nw__teamchip");
+    if (!b) return;
+    if (b.dataset.every) { setTeams([]); }
+    else {
+      var now = chosenTeams(), at = now.indexOf(b.dataset.team);
+      if (at >= 0) now.splice(at, 1); else now.push(b.dataset.team);
+      setTeams(now);
+    }
+    preview();
   }
 
   function dateControl(hostId, value) {
@@ -473,22 +499,27 @@
     host.innerHTML = "";
     var c = CBMDateTime.create({ value: value || null });
     host.appendChild(c);
-    host.addEventListener("change", preview);
-    host.addEventListener("input", preview);
     return c;
+  }
+
+  function counts() {
+    $("titleCount").textContent = $("fTitle").value.length + " of 150";
+    $("summaryCount").textContent = $("fSummary").value.length + " of 500";
   }
 
   /* ``copy`` fills the form from an item without opening it: Duplicate. */
   function fill(item, copy) {
     state.current = copy ? null : item;
     var it = item || {};
-    $("editorTitle").textContent = state.current ? "Edit item" : "New item";
     var st = state.current ? (it.status || "Draft") : "Draft";
-    $("editorStatus").textContent = st;
-    $("editorStatus").className = "cbm-pill cbm-tone--" + (STATUS_TONE[st] || "navy");
+    $("editorTitle").textContent = copy ? "Duplicate news item" : state.current ? "Edit news item" : "New news item";
+    var shown = state.current ? shownStatus(it) : "Draft";
+    $("editorStatus").textContent = copy ? "New draft" : shown;
+    $("editorStatus").className = "cbm-pill cbm-tone--" + (STATUS_TONE[shown] || "navy");
     $("fTitle").value = it.title || "";
     $("fSummary").value = it.summary || "";
-    $("fImportance").value = it.importance || "Normal";
+    var imp = it.importance || "Normal";
+    $("fImportance").querySelectorAll("input").forEach(function (r) { r.checked = r.value === imp; });
     $("fCtaLabel").value = it.ctaLabel || "";
     $("fCtaUrl").value = it.ctaUrl || "";
     drawTeams(it.audienceTeams || []);
@@ -508,8 +539,9 @@
     $("publishBtn").textContent = st === "Published" ? "Save changes" : "Publish";
     $("draftBtn").textContent = st === "Published" ? "Move back to draft" : "Save draft";
     say("");
+    counts();
+    previewTab(false);
     preview();
-    loadReport();
   }
 
   function bodyValue() {
@@ -519,14 +551,13 @@
   }
 
   function read() {
-    var teams = [];
-    $("fTeams").querySelectorAll("input:checked").forEach(function (cb) { teams.push(cb.value); });
+    var imp = $("fImportance").querySelector("input:checked");
     return {
       title: $("fTitle").value.trim(),
       summary: $("fSummary").value.trim(),
       body: toStored(bodyValue()),
-      importance: $("fImportance").value,
-      audienceTeams: teams,
+      importance: imp ? imp.value : "Normal",
+      audienceTeams: chosenTeams(),
       publishAt: state.publishEl ? CBMDateTime.read(state.publishEl) : null,
       expiresAt: state.expiresEl ? CBMDateTime.read(state.expiresEl) : null,
       ctaLabel: $("fCtaLabel").value.trim(),
@@ -534,27 +565,99 @@
     };
   }
 
-  // The preview is the member's own drawing (CBMNews.item), closed and opened.
-  function preview() {
-    var d = read();
+  // The preview is the member's own drawing (CBMNews.item), closed or opened.
+  function memberDrawing(d, open) {
     var it = {
       id: "preview", title: d.title || "(no title yet)", summary: d.summary,
       body: toDisplay(d.body), importance: d.importance,
       publishAt: d.publishAt || null,
       cta: d.ctaLabel && d.ctaUrl ? { label: d.ctaLabel, url: d.ctaUrl } : null,
     };
-    var closed = $("previewClosed"), opened = $("previewOpen");
-    closed.innerHTML = ""; opened.innerHTML = "";
-    closed.appendChild(CBMNews.item(it, {}));
-    var o = CBMNews.item(it, { open: true });
-    o.querySelector(".news-item__body").id = "news-body-preview-open";
-    opened.appendChild(o);
+    var node = CBMNews.item(it, open ? { open: true } : {});
+    if (open) node.querySelector(".news-item__body").id = "news-body-preview-open";
+    return node;
+  }
+  function preview() {
+    if ($("editorOverlay").hidden) return;
+    var d = read();
+    counts();
+    // A "not saved yet" message goes once what it named has been put right.
+    if ($("editorMsg").classList.contains("nw__msg--bad") && /^Not saved yet/.test($("editorMsg").textContent)
+        && !problems(d).length) say("");
+    $("previewClosed").innerHTML = ""; $("previewOpen").innerHTML = "";
+    $("previewClosed").appendChild(memberDrawing(d, false));
+    $("previewOpen").appendChild(memberDrawing(d, true));
+  }
+  function previewTab(open) {
+    $("tabClosed").setAttribute("aria-selected", open ? "false" : "true");
+    $("tabOpen").setAttribute("aria-selected", open ? "true" : "false");
+    $("previewClosed").hidden = open;
+    $("previewOpen").hidden = !open;
+  }
+
+  // --- opening and closing the pop-up ----------------------------------------------
+  var lastFocus = null;
+  function openEditor(item, copy) {
+    lastFocus = document.activeElement;
+    $("discardBar").hidden = true;
+    $("editorOverlay").hidden = false;
+    document.body.classList.add("nw--modal");
+    fill(item, copy);
+    state.snapshot = JSON.stringify(read());
+    $("fTitle").focus();
+  }
+  function dirty() { return state.snapshot !== JSON.stringify(read()); }
+  function closeEditor(force) {
+    if ($("editorOverlay").hidden) return;
+    if (!force && dirty()) {
+      $("discardBar").hidden = false;
+      $("discardNo").focus();
+      return;
+    }
+    $("editorOverlay").hidden = true;
+    document.body.classList.remove("nw--modal");
+    state.body = null;
+    $("fBody").innerHTML = "";
+    if (lastFocus && lastFocus.focus) lastFocus.focus();
+  }
+  // Keep the keyboard inside the pop-up while it is open.
+  function trapFocus(ev) {
+    if (ev.key === "Escape") {
+      if (document.querySelector(".jodit-popup, .jodit-dialog_active-true")) return; // the editor's own pop-up first
+      ev.preventDefault(); closeEditor(false); return;
+    }
+    if (ev.key !== "Tab") return;
+    var f = Array.prototype.filter.call(
+      $("editor").querySelectorAll("button, [href], input, select, textarea, [contenteditable='true'], [tabindex]:not([tabindex='-1'])"),
+      function (n) { return !n.disabled && n.offsetParent !== null; });
+    if (!f.length) return;
+    var first = f[0], last = f[f.length - 1];
+    if (ev.shiftKey && document.activeElement === first) { ev.preventDefault(); last.focus(); }
+    else if (!ev.shiftKey && document.activeElement === last) { ev.preventDefault(); first.focus(); }
+  }
+
+  /* Every missing or mismatched input is named at once, with focus on the first. */
+  function problems(d) {
+    var out = [];
+    if (!d.title) out.push(["fTitle", "a title"]);
+    if (d.ctaLabel && !d.ctaUrl) out.push(["fCtaUrl", "the button's address (it has text but nowhere to go)"]);
+    if (d.ctaUrl && !d.ctaLabel) out.push(["fCtaLabel", "the button's text (it has an address but no words)"]);
+    if (d.ctaUrl && !/^(https?:\/\/|\/(?!\/))/.test(d.ctaUrl)) out.push(["fCtaUrl", "a button address that starts with https://, http:// or /"]);
+    if (d.publishAt && d.expiresAt && d.expiresAt <= d.publishAt) out.push(["fExpires", "an expiry time after the publish time"]);
+    return out;
   }
 
   function save(status, btn) {
     if (state.saving) return;
     var d = read();
-    if (!d.title) { say("Give the item a title.", true); $("fTitle").focus(); return; }
+    var miss = problems(d);
+    if (miss.length) {
+      say("Not saved yet. It needs " + miss.map(function (m) { return m[1]; }).join("; and ") + ".", true);
+      var f = $(miss[0][0]);
+      var target = f && f.tagName !== "INPUT" ? (f.querySelector("input") || f) : f;
+      if (target && target.focus) target.focus();
+      return;
+    }
     d.status = status;
     state.saving = true;
     var done = window.CBMBusy && CBMBusy.start ? CBMBusy.start(btn) : function () {};
@@ -563,11 +666,18 @@
                    : api("/items", { method: "POST", body: JSON.stringify(d) });
     call.then(function (saved) {
       done(); state.saving = false;
+      closeEditor(true);
       showGrid();
       return loadList().then(function () {
         select(saved.id);
-        listSay("\u201c" + saved.title + "\u201d " + (status === "Published"
-          ? "is published. Members see it on their home page." : "is saved as a draft. Members do not see it."));
+        var shown = shownStatus(saved);
+        var text = "“" + saved.title + "” " + (shown === "Scheduled"
+          ? "is published, and goes live on " + when(saved.publishAt) + "."
+          : status === "Published" ? (cur && cur.status === "Published" ? "is saved. Members see the change at once."
+                                                                       : "is published. Members see it on their home page.")
+          : "is saved as a draft. Members do not see it.");
+        if (state.selectedId !== saved.id) text += " The filters or the search hide it in the grid.";
+        listSay(text);
       });
     }).catch(function (e) {
       done(); state.saving = false;
@@ -575,19 +685,11 @@
     });
   }
 
-  function withdraw(btn) {
-    var cur = state.current;
-    if (!cur) { say("Open a saved item first: a new item has nothing to withdraw.", true); return; }
-    if (cur.status === "Withdrawn") { say("This item is already withdrawn.", true); return; }
-    var done = window.CBMBusy && CBMBusy.start ? CBMBusy.start(btn) : function () {};
-    api("/items/" + encodeURIComponent(cur.id) + "/withdraw", { method: "POST" }).then(function (saved) {
-      done();
-      showGrid();
-      return loadList().then(function () {
-        select(saved.id);
-        listSay("\u201c" + saved.title + "\u201d is withdrawn. It has gone from every member's home page and past news.");
-      });
-    }).catch(function (e) { done(); say("Not withdrawn: " + e.message, true); });
+  function testAddress() {
+    var u = $("fCtaUrl").value.trim();
+    if (!u) { say("Type the button's address first, then open it.", true); $("fCtaUrl").focus(); return; }
+    if (!/^(https?:\/\/|\/(?!\/))/.test(u)) { say("The address must start with https://, http:// or /.", true); $("fCtaUrl").focus(); return; }
+    window.open(u, "_blank", "noopener");
   }
 
   // --- the read report (phase 6) -----------------------------------------------
@@ -608,13 +710,13 @@
   }
 
   function loadReport() {
-    var cur = state.current, panel = $("reportPanel"), body = $("reportBody");
+    var cur = state.viewing, panel = $("reportPanel"), body = $("reportBody");
     if (!cur || cur.status === "Draft") { panel.hidden = true; return; }
     panel.hidden = false;
     var read = api("/items/" + encodeURIComponent(cur.id) + "/report");
     if (window.CBMBusy && CBMBusy.loading) CBMBusy.loading(body, read);
     read.then(function (r) {
-      if (state.current !== cur) return;
+      if (state.viewing !== cur) return;
       body.innerHTML = "";
       var line = el("p", "nw__readline");
       line.appendChild(el("strong", null, r.read + " of " + r.of));
@@ -648,9 +750,8 @@
     }).catch(function (e) { done(); listSay("Not sent: " + e.message, true); });
   }
 
-  // --- switching between the grid and the work area ---------------------------------
-  // Stop 1: Create, Edit and View open the work area below the toolbar; stops 2
-  // and 3 replace it with the pop-up form and the reading screen.
+  // --- switching between the grid and the View screen --------------------------------
+  // Stop 3 replaces the View screen with the full reading screen.
   function showWork() {
     $("gridView").hidden = true;
     $("workView").hidden = false;
@@ -659,26 +760,45 @@
   function showGrid() {
     $("workView").hidden = true;
     $("gridView").hidden = false;
+    state.viewing = null;
     if (window.location.hash) history.replaceState(null, "", window.location.pathname);
   }
 
-  function openItem(id, copy) {
-    var read = api("/items/" + encodeURIComponent(id)).then(function (it) {
-      if (copy) {
-        it = Object.assign({}, it, { title: "Copy of " + (it.title || ""), publishAt: null, expiresAt: null });
-      }
-      fill(it, copy);
-      showWork();
-      if (!copy) history.replaceState(null, "", "#" + id);
-      if (copy) say("A copy, not yet saved. Change what needs changing and save it.");
-    });
-    if (window.CBMBusy && CBMBusy.loading) CBMBusy.loading($("listBody"), read);
+  function fetchItem(id) {
+    var read = api("/items/" + encodeURIComponent(id));
+    if (window.CBMBusy && CBMBusy.loading) CBMBusy.loading($("gridView").hidden ? $("workView") : $("listBody"), read);
     read.catch(function (e) { listSay("That item could not be opened: " + e.message, true); });
     return read;
   }
-  function viewItem(id) { return openItem(id, false); }
-  function editItem(id) { return openItem(id, false); }
-  function duplicate(id) { return openItem(id, true); }
+  function viewItem(id) {
+    return fetchItem(id).then(function (it) {
+      state.viewing = it;
+      var ul = $("viewOpen");
+      ul.innerHTML = "";
+      ul.appendChild(memberDrawing(it, true));
+      showWork();
+      history.replaceState(null, "", "#" + id);
+      loadReport();
+    });
+  }
+  function editItem(id) {
+    return fetchItem(id).then(function (it) {
+      if (it.status === "Withdrawn") {
+        var text = "\u201c" + it.title + "\u201d is withdrawn, so it cannot be edited. Choose Actions, then Duplicate as a new draft, to reuse it.";
+        if ($("gridView").hidden) showGrid();
+        listSay(text, true);
+        return;
+      }
+      openEditor(it, false);
+    });
+  }
+  function duplicate(id) {
+    return fetchItem(id).then(function (it) {
+      openEditor(Object.assign({}, it, { title: "Copy of " + (it.title || ""), publishAt: null, expiresAt: null }), true);
+      state.snapshot = null;   // a copy is unsaved from the start
+      say("A copy, not saved yet. Change what needs changing, then save it.");
+    });
+  }
 
   function boot() {
     $("logoutBtn").addEventListener("click", function () {
@@ -693,12 +813,22 @@
       }
       state.teams = s.teams || [];
       $("pageView").hidden = false;
-      ["fTitle", "fSummary", "fImportance", "fCtaLabel", "fCtaUrl"].forEach(function (id) {
+      ["fTitle", "fSummary", "fImportance", "fCtaLabel", "fCtaUrl", "fPublish", "fExpires"].forEach(function (id) {
         $(id).addEventListener("input", preview);
         $(id).addEventListener("change", preview);
       });
-      $("createBtn").addEventListener("click", function () {
-        listSay(""); fill(null); showWork(); $("fTitle").focus();
+      $("fTeams").addEventListener("click", onTeamClick);
+      $("tabClosed").addEventListener("click", function () { previewTab(false); });
+      $("tabOpen").addEventListener("click", function () { previewTab(true); });
+      $("editorClose").addEventListener("click", function () { closeEditor(false); });
+      $("cancelBtn").addEventListener("click", function () { closeEditor(false); });
+      $("discardYes").addEventListener("click", function () { closeEditor(true); });
+      $("discardNo").addEventListener("click", function () { $("discardBar").hidden = true; $("fTitle").focus(); });
+      $("ctaTest").addEventListener("click", testAddress);
+      $("editorOverlay").addEventListener("keydown", trapFocus);
+      $("createBtn").addEventListener("click", function () { listSay(""); openEditor(null, false); });
+      $("viewEditBtn").addEventListener("click", function () {
+        if (state.viewing) { var id = state.viewing.id; editItem(id); }
       });
       $("editBtn").addEventListener("click", function () {
         listSay("");
@@ -729,7 +859,6 @@
       $("confirmNo").addEventListener("click", function () { $("confirmBar").hidden = true; });
       $("draftBtn").addEventListener("click", function () { save("Draft", $("draftBtn")); });
       $("publishBtn").addEventListener("click", function () { save("Published", $("publishBtn")); });
-      $("withdrawBtn").addEventListener("click", function () { withdraw($("withdrawBtn")); });
       $("reportRefresh").addEventListener("click", loadReport);
       loadList().then(function () {
         var id = (window.location.hash || "").slice(1);

@@ -1,8 +1,8 @@
 # Chapter News publisher page — redesign plan
 
-Last Updated: 11-20-26 20:08 · Revision 1.0 — change log at the end.
+Last Updated: 11-20-26 23:33 · Revision 1.1 — change log at the end.
 
-**Status: approved 11-20-26 (Doug). Stop 1 built as v0.357.0.**
+**Status: approved 11-20-26 (Doug). Stop 1 built as v0.357.0 (pushed 11-20-26); stop 2 built as v0.358.0.**
 
 ## 1. The request
 
@@ -66,11 +66,13 @@ checked on the Business Mentors Association's system.
 1. The grid, toolbar, filters and Actions menu — **built, v0.357.0.** Until
    stop 2, Create, Edit and View open the previous editor in place of the
    grid, with "← Back to news".
-2. The create and edit pop-up.
+2. The create and edit pop-up — **built, v0.358.0.** Until stop 3, View
+   shows the item as a member sees it, opened, with the read report.
 3. The View screen.
 
 ## Change log
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.1 | 11-20-26 23:33 | Claude (Claude Code) | Stop 2 built (v0.358.0). Made on the way: a withdrawn item cannot be edited (Edit says to duplicate it); Withdraw left the form for Actions; the pop-up is a div, not a dialog element, so the editor's own pop-ups stay on top. |
 | 1.0 | 11-20-26 20:08 | Claude (Claude Code) | Plan approved by Doug in chat, with ruling R1; stop 1 built. |

@@ -692,3 +692,24 @@ def test_the_listing_carries_the_summary_for_the_search():
     from news import router as news_router
     row = news_router._listing({"id": "n1", "name": "T", "summary": "S"})
     assert row["title"] == "T" and row["summary"] == "S"
+
+
+# --- the create and edit pop-up (stop 2; ruling R1) -----------------------------------
+
+def test_create_and_edit_share_one_popup_that_returns_to_the_grid():
+    page = (ROOT / "news/frontend/index.html").read_text()
+    # One form, in a pop-up that is not a <dialog> (the editor's own pop-ups
+    # are added to <body> and would sit under the top layer).
+    assert page.count('id="editor"') == 1 and "<dialog" not in page
+    assert 'role="dialog" aria-modal="true"' in page
+    for section in ("What it says", "Who and when", "Button"):
+        assert f'<h3 class="nw__sectionhead">{section}' in page
+    order = [page.index(f'id="{i}"') for i in ("cancelBtn", "draftBtn", "publishBtn")]
+    assert order == sorted(order)
+    assert 'id="withdrawBtn"' not in page  # Withdraw lives in Actions
+    js = (ROOT / "news/frontend/app.js").read_text()
+    # A save closes the pop-up and returns to the grid with the row selected.
+    assert "closeEditor(true);\n      showGrid();" in js and "select(saved.id);" in js
+    # Closing with changes asks inside the page, never with a browser dialog.
+    assert "You have changes that are not saved" in page
+    assert "window.confirm" not in js and " confirm(" not in js

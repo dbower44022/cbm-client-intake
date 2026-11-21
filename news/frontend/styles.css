@@ -103,11 +103,91 @@ body { background: var(--cbm-page); }
 .nw__bar { display: block; height: 4px; border-radius: 2px; background: var(--cbm-panel-border); overflow: hidden; }
 .nw__barfill { display: block; height: 100%; background: #1D6B34; }
 
-/* The work area (stop 1 only): the editor beside the preview and report. */
+/* The View screen (stop 3 replaces it). */
+.nw__viewbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
 .nw__work { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 24px; align-items: start; }
 @media (max-width: 1099px) { .nw__work { grid-template-columns: minmax(0, 1fr); } }
-.nw__editor { grid-row: span 2; }
-.nw__editor .cbm-label { flex: 1 1 auto; }
+
+/* The create and edit pop-up (stop 2). Nearly the whole window; the form
+   on the left, the member's preview on the right. Heights come from the
+   fixed overlay, never from a bare vh (textsize.js zooms the page). */
+body.nw--modal { overflow: hidden; }
+.nw__overlay {
+  position: fixed; inset: 0; z-index: 900; display: flex; align-items: stretch; justify-content: center;
+  padding: 24px; background: rgba(15, 28, 46, 0.55);
+}
+.nw__overlay[hidden] { display: none; }
+.nw__modal {
+  display: flex; flex-direction: column; width: 100%; height: 100%; margin: 0;
+  background: var(--cbm-panel); border-radius: 10px; box-shadow: 0 16px 48px rgba(0, 0, 0, 0.3); overflow: hidden;
+}
+.nw__modalhead {
+  display: flex; align-items: center; gap: 12px; padding: 14px 20px;
+  border-bottom: 1px solid var(--cbm-panel-border);
+}
+.nw__modalhead h2 { margin: 0; font-family: var(--cbm-font-heading); font-size: 20px; color: var(--cbm-navy); }
+.nw__close {
+  margin-left: auto; width: 36px; height: 36px; border: 0; border-radius: 6px; background: none;
+  font-size: 26px; line-height: 1; color: var(--cbm-text-muted); cursor: pointer;
+}
+.nw__close:hover, .nw__close:focus-visible { background: var(--cbm-page); color: var(--cbm-text-strong); }
+.nw__modalbody {
+  flex: 1 1 auto; min-height: 0; display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(320px, 2fr);
+}
+.nw__formcol { overflow: auto; padding: 8px 20px 20px; }
+.nw__previewcol { overflow: auto; padding: 16px 20px; background: var(--cbm-page); border-left: 1px solid var(--cbm-panel-border); }
+@media (max-width: 899px) {
+  .nw__overlay { padding: 0; }
+  .nw__modal { border-radius: 0; }
+  .nw__modalbody { display: block; overflow: auto; }
+  .nw__formcol, .nw__previewcol { overflow: visible; }
+  .nw__previewcol { border-left: 0; border-top: 1px solid var(--cbm-panel-border); }
+}
+.nw__section { display: flex; flex-direction: column; gap: 12px; padding: 16px 0; border-bottom: 1px solid var(--cbm-panel-border); }
+.nw__section:last-child { border-bottom: 0; }
+.nw__sectionhead { margin: 0; font-size: 13px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--cbm-navy); }
+.nw__sectionhead em { font-style: normal; font-weight: 400; text-transform: none; letter-spacing: 0; color: var(--cbm-text-muted); }
+.nw__req { color: #9B1C1C; }
+.nw__countnote { float: right; }
+.nw__pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr)); gap: 12px 16px; }
+.nw__f input[type="text"], .nw__f textarea { width: 100%; }
+
+.nw__teamchips { display: flex; flex-wrap: wrap; gap: 8px; }
+.nw__teamchip {
+  min-height: 34px; padding: 4px 14px; border: 1px solid var(--cbm-panel-border); border-radius: 999px;
+  background: var(--cbm-panel); color: var(--cbm-text-strong); font: inherit; font-size: 14px; cursor: pointer;
+}
+.nw__teamchip[aria-pressed="true"] { background: var(--cbm-navy); border-color: var(--cbm-navy); color: #fff; }
+.nw__teamchip[aria-pressed="true"]::before { content: "\2713  "; }
+.nw__teamchip:focus-visible { outline: 2px solid var(--cbm-blue); outline-offset: 2px; }
+
+.nw__importance { border: 0; padding: 0; margin: 0; min-width: 0; }
+.nw__choices { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(200px, 100%), 1fr)); gap: 8px; }
+.nw__importance legend { padding: 0; margin-bottom: 4px; font-weight: 500; }
+.nw__choice {
+  display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; cursor: pointer;
+  border: 1px solid var(--cbm-panel-border); border-radius: 8px; background: var(--cbm-panel);
+}
+.nw__choice:has(input:checked) { border-color: var(--cbm-navy); background: #EEF3F9; box-shadow: inset 0 0 0 1px var(--cbm-navy); }
+.nw__choice input { margin-top: 3px; }
+.nw__choice span { display: flex; flex-direction: column; gap: 2px; }
+.nw__choice strong { color: var(--cbm-text-strong); font-weight: 600; }
+.nw__choice em { font-style: normal; font-size: 13px; color: var(--cbm-text-muted); }
+
+.nw__previewhead { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 12px; }
+.nw__tabs { display: inline-flex; border: 1px solid var(--cbm-panel-border); border-radius: 8px; overflow: hidden; }
+.nw__tabs button { padding: 6px 14px; border: 0; background: var(--cbm-panel); font: inherit; font-size: 14px; color: var(--cbm-text); cursor: pointer; }
+.nw__tabs button[aria-selected="true"] { background: var(--cbm-navy); color: #fff; }
+.nw__previewcol .cbm-rows { background: var(--cbm-panel); border: 1px solid var(--cbm-panel-border); border-radius: 8px; }
+.nw__previewcol .cbm-rows[hidden] { display: none; }
+
+.nw__discard { margin: 0 20px; }
+.nw__modalfoot {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 8px;
+  padding: 12px 20px; border-top: 1px solid var(--cbm-panel-border); background: var(--cbm-panel);
+}
+.nw__modalfoot .nw__msg { flex: 1 1 20rem; margin: 0; }
 
 .nw__fields {
   display: grid;

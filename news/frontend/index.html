@@ -76,63 +76,111 @@
         <p class="nw__count" id="listCount"></p>
       </div>
 
-      <!-- Create, edit and view open here until stops 2 and 3 replace it. -->
+      <!-- View (stop 3 replaces this with the reading screen): the item as a
+           member sees it, opened, and its read report. -->
       <div id="workView" class="nw__workview" hidden>
-        <p><button type="button" class="cbm-action--quiet" id="backBtn">← Back to news</button></p>
-      <div class="nw__work">
-        <form class="cbm-panel nw__editor" id="editor" autocomplete="off" novalidate>
-          <div class="cbm-panel__head">
-            <h2 class="cbm-label" id="editorTitle">New item</h2>
+        <div class="nw__viewbar">
+          <button type="button" class="cbm-action--quiet" id="backBtn">← Back to news</button>
+          <button type="button" class="cbm-action" id="viewEditBtn">Edit</button>
+        </div>
+        <div class="nw__work">
+          <div class="cbm-panel">
+            <div class="cbm-panel__head"><h2 class="cbm-label">As a member sees it, opened</h2></div>
+            <div class="cbm-panel__body"><ul class="cbm-rows" id="viewOpen"></ul></div>
+          </div>
+          <div class="cbm-panel nw__report" id="reportPanel" hidden>
+            <div class="cbm-panel__head">
+              <h2 class="cbm-label">Read report</h2>
+              <button type="button" class="cbm-action--quiet" id="reportRefresh">Refresh</button>
+            </div>
+            <div class="cbm-panel__body" id="reportBody"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Create and edit: one pop-up (stop 2; ruling R1). A div, not a dialog element:
+           the editor's own pop-ups (link, image, colour) are added to <body>
+           and would sit under a top-layer dialog. -->
+      <div class="nw__overlay" id="editorOverlay" hidden>
+        <form class="nw__modal" id="editor" role="dialog" aria-modal="true" aria-labelledby="editorTitle" autocomplete="off" novalidate>
+          <header class="nw__modalhead">
+            <h2 id="editorTitle">New news item</h2>
             <span class="cbm-pill cbm-tone--navy" id="editorStatus">Draft</span>
+            <button type="button" class="nw__close" id="editorClose" aria-label="Close">×</button>
+          </header>
+
+          <div class="nw__modalbody">
+            <div class="nw__formcol">
+              <section class="nw__section">
+                <h3 class="nw__sectionhead">What it says</h3>
+                <label class="nw__f"><span>Title <b class="nw__req" aria-hidden="true">*</b> <em class="nw__countnote" id="titleCount"></em></span>
+                  <input type="text" id="fTitle" maxlength="150" required aria-required="true" /></label>
+                <label class="nw__f"><span>Summary <em>shown before the item is opened, and in the weekly digest</em> <em class="nw__countnote" id="summaryCount"></em></span>
+                  <textarea id="fSummary" rows="2" maxlength="500"></textarea></label>
+                <div class="nw__f"><span id="bodyLabel">Body</span><div id="fBody" aria-labelledby="bodyLabel"></div></div>
+              </section>
+
+              <section class="nw__section">
+                <h3 class="nw__sectionhead">Who and when</h3>
+                <div class="nw__f" role="group" aria-labelledby="audienceLabel">
+                  <span id="audienceLabel">Audience <em>choose teams, or Every member</em></span>
+                  <div class="nw__teamchips" id="fTeams"></div>
+                </div>
+                <fieldset class="nw__f nw__importance" id="fImportance">
+                  <legend>Importance</legend>
+                  <div class="nw__choices">
+                  <label class="nw__choice"><input type="radio" name="importance" value="Normal" />
+                    <span><strong>Normal</strong><em>Listed with the rest, newest first. Members dismiss it when read.</em></span></label>
+                  <label class="nw__choice"><input type="radio" name="importance" value="Pinned" />
+                    <span><strong>Pinned</strong><em>Shown above the normal items until it is dismissed or expires.</em></span></label>
+                  <label class="nw__choice"><input type="radio" name="importance" value="Must acknowledge" />
+                    <span><strong>Must acknowledge</strong><em>Stays at the top until each member clicks "I have read this". The read report lists who has.</em></span></label>
+                  </div>
+                </fieldset>
+                <div class="nw__pair">
+                  <div class="nw__f"><span>Publish at <em>empty: the moment you publish</em></span><div id="fPublish"></div></div>
+                  <div class="nw__f"><span>Expires at <em>optional</em></span><div id="fExpires"></div></div>
+                </div>
+              </section>
+
+              <section class="nw__section">
+                <h3 class="nw__sectionhead">Button <em>optional — a call to action under the item</em></h3>
+                <div class="nw__pair">
+                  <label class="nw__f"><span>Button text</span>
+                    <input type="text" id="fCtaLabel" maxlength="60" placeholder="for example: Sign up" /></label>
+                  <label class="nw__f"><span>Button address</span>
+                    <input type="text" id="fCtaUrl" placeholder="https://… or /mentorsessions/" /></label>
+                </div>
+                <p class="nw__hint"><button type="button" class="cbm-action--quiet" id="ctaTest">Open this address</button> to check it goes where you expect.</p>
+              </section>
+            </div>
+
+            <aside class="nw__previewcol" aria-label="Preview">
+              <div class="nw__previewhead">
+                <h3 class="nw__sectionhead">Preview — as a member sees it</h3>
+                <div class="nw__tabs" role="tablist">
+                  <button type="button" role="tab" id="tabClosed" aria-selected="true" aria-controls="previewClosed">Closed</button>
+                  <button type="button" role="tab" id="tabOpen" aria-selected="false" aria-controls="previewOpen">Opened</button>
+                </div>
+              </div>
+              <ul class="cbm-rows" id="previewClosed" role="tabpanel" aria-labelledby="tabClosed"></ul>
+              <ul class="cbm-rows" id="previewOpen" role="tabpanel" aria-labelledby="tabOpen" hidden></ul>
+            </aside>
           </div>
-          <div class="nw__fields">
-            <label class="nw__f nw__f--wide"><span>Title</span>
-              <input type="text" id="fTitle" maxlength="150" /></label>
-            <label class="nw__f nw__f--wide"><span>Summary <em>shown before the item is opened, and in the weekly digest</em></span>
-              <textarea id="fSummary" rows="2" maxlength="500"></textarea></label>
-            <div class="nw__f nw__f--wide"><span>Body</span><div id="fBody"></div></div>
-            <label class="nw__f"><span>Importance</span>
-              <select id="fImportance">
-                <option value="Normal">Normal</option>
-                <option value="Pinned">Pinned (shown above the rest)</option>
-                <option value="Must acknowledge">Must acknowledge (members confirm they have read it)</option>
-              </select></label>
-            <fieldset class="nw__f nw__teams"><legend>Audience <em>no team chosen means every member</em></legend>
-              <div id="fTeams"></div></fieldset>
-            <div class="nw__f"><span>Publish at <em>empty: when you publish</em></span><div id="fPublish"></div></div>
-            <div class="nw__f"><span>Expires at <em>optional</em></span><div id="fExpires"></div></div>
-            <label class="nw__f"><span>Button text <em>optional call to action</em></span>
-              <input type="text" id="fCtaLabel" maxlength="60" /></label>
-            <label class="nw__f"><span>Button address</span>
-              <input type="text" id="fCtaUrl" placeholder="https://… or /mentorsessions/" /></label>
+
+          <div class="nw__confirm nw__discard" id="discardBar" role="alertdialog" aria-labelledby="discardText" hidden>
+            <span id="discardText">You have changes that are not saved. Close and lose them?</span>
+            <button type="button" class="cbm-action nw__danger" id="discardYes">Close and lose them</button>
+            <button type="button" class="cbm-action--second" id="discardNo">Keep editing</button>
           </div>
-          <p class="nw__msg" id="editorMsg" role="status" hidden></p>
-          <div class="nw__buttons">
+
+          <footer class="nw__modalfoot">
+            <p class="nw__msg" id="editorMsg" role="status" hidden></p>
+            <button type="button" class="cbm-action--second" id="cancelBtn">Cancel</button>
             <button type="button" class="cbm-action--second" id="draftBtn">Save draft</button>
             <button type="button" class="cbm-action" id="publishBtn">Publish</button>
-            <button type="button" class="cbm-action--second nw__withdraw" id="withdrawBtn">Withdraw</button>
-          </div>
+          </footer>
         </form>
-
-        <div class="cbm-panel nw__preview">
-          <div class="cbm-panel__head"><h2 class="cbm-label">Preview — as a member sees it</h2></div>
-          <div class="cbm-panel__body">
-            <p class="nw__previewnote">On the home page, before it is opened:</p>
-            <ul class="cbm-rows" id="previewClosed"></ul>
-            <p class="nw__previewnote">Opened:</p>
-            <ul class="cbm-rows" id="previewOpen"></ul>
-          </div>
-        </div>
-
-        <div class="cbm-panel nw__report" id="reportPanel" hidden>
-          <div class="cbm-panel__head">
-            <h2 class="cbm-label">Read report</h2>
-            <button type="button" class="cbm-action--quiet" id="reportRefresh">Refresh</button>
-          </div>
-          <div class="cbm-panel__body" id="reportBody"></div>
-        </div>
-
-      </div>
       </div>
     </section>
 

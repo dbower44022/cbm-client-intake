@@ -5,6 +5,31 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.358.0] — 2026-11-20
+
+**feat(news): create and edit in one pop-up** (stop 2 of
+`prds/news-publisher-redesign-plan.md`; ruling R1, Edit uses the same
+pop-up as Create).
+
+- **Create, Edit and Duplicate open one pop-up** nearly the size of the
+  window: the form on the left in three sections — *What it says* (title
+  and summary with character counts, the body), *Who and when* (audience
+  as team chips with Every member, importance as three explained choices,
+  publish and expiry dates), *Button* (text, address, Open this address) —
+  and the member's preview on the right, Closed and Opened tabs.
+- **Footer**: Cancel · Save draft · Publish (Move back to draft and Save
+  changes for a published item). Every missing or mismatched input is named
+  on Save, and the message goes when it is put right. A save closes the
+  pop-up and returns to the grid with the row selected.
+- **Closing with changes asks first**, in the pop-up (×, Cancel, Escape);
+  Escape inside the editor's own link or image pop-up closes only that.
+  The keyboard stays inside the pop-up while it is open.
+- A withdrawn item cannot be edited; Edit says to duplicate it instead.
+  Withdraw is in Actions only.
+- **View** (until stop 3): the item as a member sees it, opened, with the
+  read report, an Edit button and Back to news.
+
+
 ## [0.357.0] — 2026-11-20
 
 **feat(news): the publishers' page opens on a standard grid** (stop 1 of
