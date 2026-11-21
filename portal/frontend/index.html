@@ -10,6 +10,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700&family=Roboto+Slab:wght@400;600&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/shared/tokens.css" />
   <link rel="stylesheet" href="/shared/charts.css" />
+  <link rel="stylesheet" href="/shared/signin.css" />
   <link rel="stylesheet" href="/portal/styles.css" />
   <!-- The new home page (HOME_V2): applies only once home.js marks <body>. -->
   <link rel="stylesheet" href="/shared/panel.css" />
@@ -23,49 +24,9 @@
       <p class="portal__sub">Sign in to access your applications.</p>
     </header>
 
-    <!-- Login -->
-    <section class="portal__login" id="loginView" hidden>
-      <h2>Sign in</h2>
-      <p class="cbm-help">Use your CRM username and password.</p>
-      <form id="loginForm" autocomplete="on">
-        <div class="cbm-field">
-          <label for="username">Username</label>
-          <input type="text" id="username" name="username" autocomplete="username" required />
-        </div>
-        <div class="cbm-field">
-          <div class="portal__lab-line">
-            <label for="password">Password</label>
-            <button type="button" class="portal__link-btn" id="pwToggle" tabindex="-1"
-                    aria-controls="password" aria-pressed="false">Show</button>
-          </div>
-          <input type="password" id="password" name="password" autocomplete="current-password" required />
-        </div>
-        <p class="form-error" id="loginError" role="alert" hidden></p>
-        <button type="submit" class="cbm-button" id="loginBtn">Sign in</button>
-        <p class="portal__forgot"><a href="#" id="forgotLink">Forgot your password?</a></p>
-      </form>
-    </section>
-
-    <!-- Forgot password -->
-    <section class="portal__login" id="forgotView" hidden>
-      <h2>Reset your password</h2>
-      <p class="cbm-help">Enter your CRM username and the email address on your
-        account, and we&rsquo;ll email you a link to choose a new password.</p>
-      <form id="forgotForm" autocomplete="on">
-        <div class="cbm-field">
-          <label for="forgotUsername">Username</label>
-          <input type="text" id="forgotUsername" name="username" autocomplete="username" required />
-        </div>
-        <div class="cbm-field">
-          <label for="forgotEmail">Email address</label>
-          <input type="email" id="forgotEmail" name="email" autocomplete="email" required />
-        </div>
-        <p class="form-error" id="forgotError" role="alert" hidden></p>
-        <p class="form-success" id="forgotSuccess" role="status" hidden></p>
-        <button type="submit" class="cbm-button" id="forgotBtn">Email me a reset link</button>
-        <p class="portal__forgot"><a href="#" id="backToLogin">&larr; Back to sign in</a></p>
-      </form>
-    </section>
+    <!-- Sign in: the shared sign-in box (frontend/shared/signin.js, since
+         v0.361.0), with its "Forgot your password?" screen inside it. -->
+    <section id="loginView" hidden></section>
 
     <!-- Home (post-login) -->
     <section class="portal__home" id="homeView" hidden>
@@ -152,6 +113,7 @@
   <script src="/portal/birthday.js"></script>
   <script src="/shared/news.js"></script>
   <script src="/portal/home.js"></script>
+  <script src="/shared/signin.js"></script>
   <script src="/portal/app.js"></script>
   <script src="/shared/footer.js"></script>
 </body>

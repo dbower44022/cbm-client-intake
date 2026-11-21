@@ -737,7 +737,9 @@ partner, funder or client, and referrals are credited (decisions AM1 to AM7,
   engagement, and the partner and funder deliveries reuse a referred
   starting profile (`ambassador/referrals.py`; feature-detected,
   best-effort).
-- **The shared sign-in box** is `frontend/shared/signin.js`.
+- **The shared sign-in box** is `frontend/shared/signin.js`; the portal
+  signs in through it too (v0.361.0), keeping the field ids and names
+  `username` and `password` so saved passwords match.
 
 ## Cross-cutting subsystems
 

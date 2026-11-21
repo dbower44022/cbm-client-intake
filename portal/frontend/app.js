@@ -32,32 +32,22 @@
     return data;
   }
 
-  // --- Show/hide the typed password ---------------------------------------
-  // Reveal is opt-in and never sticky: it resets to hidden whenever the form is
-  // shown or a sign-in completes, so a revealed password can't be left on
-  // screen for the next person at the machine.
-  function setPasswordVisible(on) {
-    var input = $("password"), btn = $("pwToggle");
-    input.type = on ? "text" : "password";
-    btn.textContent = on ? "Hide" : "Show";
-    btn.setAttribute("aria-pressed", on ? "true" : "false");
-    btn.setAttribute("aria-label", on ? "Hide password" : "Show password");
-  }
+  // --- Sign in: the shared sign-in box (frontend/shared/signin.js) -------
+  // The box carries the form, the Show button and "Forgot your password?".
+  // It keeps this page's field ids, so a browser's saved password still
+  // matches, and hands back the sign-in reply, which enter() draws.
+  var signin = CBMSignIn.mount($("loginView"), {
+    title: "Sign in",
+    help: "Use your CRM username and password.",
+    ids: { username: "username", password: "password" },
+    autofocus: false,
+    onSignedIn: function (data) { enter(data); },
+  });
 
   function showLogin() {
     if (window.CBMHome) CBMHome.leave();   // the new home page (HOME_V2), if shown
-    hide($("homeView")); hide($("forgotView")); show($("loginView"));
-    setPasswordVisible(false);
-    $("username").focus();
-  }
-
-  function showForgot() {
-    hide($("loginView")); hide($("homeView"));
-    hide($("forgotError")); hide($("forgotSuccess"));
-    // Carry a username already typed on the login form over to the reset form.
-    if (!$("forgotUsername").value) $("forgotUsername").value = $("username").value;
-    show($("forgotView"));
-    ($("forgotUsername").value ? $("forgotEmail") : $("forgotUsername")).focus();
+    hide($("homeView")); show($("loginView"));
+    signin.reset();
   }
 
   // A shortcut chip like the old index page: /mentoradmin, /clientintake, …
@@ -550,54 +540,6 @@
     });
   }
 
-  $("loginForm").addEventListener("submit", async function (ev) {
-    ev.preventDefault();
-    hide($("loginError")); $("loginBtn").disabled = true;
-    try {
-      var data = await api("/login", {
-        method: "POST",
-        body: JSON.stringify({ username: $("username").value, password: $("password").value }),
-      });
-      $("password").value = "";
-      setPasswordVisible(false);
-      enter(data);
-    } catch (e) {
-      var le = $("loginError"); le.textContent = e.message; show(le);
-    } finally { $("loginBtn").disabled = false; }
-  });
-
-  $("pwToggle").addEventListener("click", function () {
-    var input = $("password"), on = input.type === "password";
-    // Read the caret BEFORE the type change — changing `type` moves it.
-    var at = input.selectionStart;
-    setPasswordVisible(on);
-    input.focus();
-    if (at !== null && at !== undefined) {
-      try { input.setSelectionRange(at, at); } catch (e) {}
-    }
-  });
-  setPasswordVisible(false);
-
-  $("forgotLink").addEventListener("click", function (ev) { ev.preventDefault(); showForgot(); });
-  $("backToLogin").addEventListener("click", function (ev) { ev.preventDefault(); showLogin(); });
-
-  $("forgotForm").addEventListener("submit", async function (ev) {
-    ev.preventDefault();
-    hide($("forgotError")); hide($("forgotSuccess")); $("forgotBtn").disabled = true;
-    try {
-      var data = await api("/forgot-password", {
-        method: "POST",
-        body: JSON.stringify({
-          username: $("forgotUsername").value,
-          emailAddress: $("forgotEmail").value,
-        }),
-      });
-      var fs = $("forgotSuccess"); fs.textContent = data.message; show(fs);
-    } catch (e) {
-      var fe = $("forgotError"); fe.textContent = e.message; show(fe);
-    } finally { $("forgotBtn").disabled = false; }
-  });
-
   async function signOut() {
     try { await api("/logout", { method: "POST" }); } catch (e) {}
     showLogin();
@@ -609,9 +551,7 @@
     catch (e) {
       showLogin();
       if (!e || !e.status || e.status >= 500) {
-        var le = $("loginError");
-        le.textContent = "The server isn't responding right now. Please try again in a moment.";
-        show(le);
+        signin.error("The server isn't responding right now. Please try again in a moment.");
       }
     }
   })();

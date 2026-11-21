@@ -7,7 +7,20 @@
    "Forgot your password?" uses the portal's /api/portal/forgot-password,
    which hands the request to the CRM's own recovery email.
 
-     CBMSignIn.mount(container, { title: "Sign in", onSignedIn: function () { … } });
+     var box = CBMSignIn.mount(container, {
+       title: "Sign in", help: "…",
+       ids: { username: "username", password: "password" },  // optional
+       autofocus: true,                                       // optional
+       onSignedIn: function (reply) { … }   // the portal's sign-in reply
+     });
+     box.reset();          // back to the sign-in form, password cleared and hidden
+     box.error("…");       // a message under the password box
+
+   The portal uses it too (since v0.361.0), with its own field ids, so a
+   browser's saved password keeps matching. The fields are always named
+   "username" and "password" for the same reason. The Show button is out of
+   the tab order (Doug, 10-11-26) and never sticky: it resets whenever the
+   form is shown or a sign-in completes.
 
    The box is built with DOM calls, never innerHTML from data. Buttons are
    never disabled for validation: a click with an empty box says what is
@@ -28,10 +41,11 @@
   }
 
   function post(path, body) {
-    return fetch(API + path, {
-      method: "POST", credentials: "same-origin",
-      headers: { "Content-Type": "application/json" }, body: JSON.stringify(body)
-    }).then(function (r) {
+    var opts = { method: "POST", credentials: "same-origin",
+                 headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) };
+    // Timeout-wrapped where busy.js offers it: a hung request ends in words.
+    var send = window.CBMBusy && CBMBusy.fetch ? CBMBusy.fetch(API + path, opts) : fetch(API + path, opts);
+    return send.then(function (r) {
       return r.json().catch(function () { return null; }).then(function (d) {
         if (!r.ok) {
           var detail = d && d.detail;
@@ -43,12 +57,12 @@
     });
   }
 
-  function field(id, label, type, autocomplete) {
+  function field(id, label, type, autocomplete, name) {
     var wrap = el("div", { "class": "cbm-field" });
     var line = el("div", { "class": "cbm-signin__lab-line" });
     line.appendChild(el("label", { "for": id }, label));
     wrap.appendChild(line);
-    var input = el("input", { type: type, id: id, name: id, autocomplete: autocomplete });
+    var input = el("input", { type: type, id: id, name: name || id, autocomplete: autocomplete });
     wrap.appendChild(input);
     return { wrap: wrap, line: line, input: input };
   }
@@ -63,8 +77,9 @@
     box.appendChild(el("h2", null, opts.title || "Sign in"));
     box.appendChild(el("p", { "class": "cbm-help" }, opts.help || "Use your CRM username and password."));
     var form = el("form", { autocomplete: "on", novalidate: "novalidate" });
-    var user = field(uid + "u", "Username", "text", "username");
-    var pass = field(uid + "p", "Password", "password", "current-password");
+    var ids = opts.ids || {};
+    var user = field(ids.username || uid + "u", "Username", "text", "username", "username");
+    var pass = field(ids.password || uid + "p", "Password", "password", "current-password", "password");
     var toggle = el("button", { type: "button", "class": "cbm-signin__link-btn", tabindex: "-1",
                                 "aria-pressed": "false", "aria-label": "Show password" }, "Show");
     pass.line.appendChild(toggle);
@@ -84,8 +99,8 @@
     fbox.appendChild(el("p", { "class": "cbm-help" },
       "Enter your username and the email address on your account, and we'll email you a link to choose a new password."));
     var fform = el("form", { autocomplete: "on", novalidate: "novalidate" });
-    var fuser = field(uid + "fu", "Username", "text", "username");
-    var femail = field(uid + "fe", "Email address", "email", "email");
+    var fuser = field(uid + "fu", "Username", "text", "username", "username");
+    var femail = field(uid + "fe", "Email address", "email", "email", "email");
     var ferr = el("p", { "class": "cbm-signin__error", role: "alert" });
     ferr.hidden = true;
     var fok = el("p", { "class": "cbm-signin__ok", role: "status" });
@@ -102,12 +117,20 @@
 
     function say(p, text) { p.textContent = text; p.hidden = !text; }
 
-    toggle.addEventListener("click", function () {
-      var on = pass.input.type === "password";
+    function reveal(on) {
       pass.input.type = on ? "text" : "password";
       toggle.textContent = on ? "Hide" : "Show";
       toggle.setAttribute("aria-pressed", on ? "true" : "false");
       toggle.setAttribute("aria-label", on ? "Hide password" : "Show password");
+    }
+    toggle.addEventListener("click", function () {
+      // Read the caret BEFORE the type change: changing `type` moves it.
+      var at = pass.input.selectionStart;
+      reveal(pass.input.type === "password");
+      pass.input.focus();
+      if (at !== null && at !== undefined) {
+        try { pass.input.setSelectionRange(at, at); } catch (e) {}
+      }
     });
 
     form.addEventListener("submit", function (ev) {
@@ -117,9 +140,10 @@
       if (!pass.input.value) { say(err, "Enter your password."); pass.input.focus(); return; }
       var done = window.CBMBusy ? CBMBusy.start(btn) : function () {};
       post("/login", { username: user.input.value.trim(), password: pass.input.value })
-        .then(function () {
+        .then(function (reply) {
           pass.input.value = "";
-          if (opts.onSignedIn) opts.onSignedIn();
+          reveal(false);
+          if (opts.onSignedIn) opts.onSignedIn(reply);
         })
         .catch(function (e) { say(err, e.message); })
         .then(done, done);
@@ -148,8 +172,16 @@
         .then(done, done);
     });
 
-    setTimeout(function () { user.input.focus(); }, 0);
-    return { el: box };
+    if (opts.autofocus !== false) setTimeout(function () { user.input.focus(); }, 0);
+    return {
+      el: box,
+      reset: function () {
+        fbox.hidden = true; box.hidden = false;
+        pass.input.value = ""; reveal(false); say(err, "");
+        user.input.focus();
+      },
+      error: function (text) { say(err, text); }
+    };
   }
 
   window.CBMSignIn = { mount: mount };

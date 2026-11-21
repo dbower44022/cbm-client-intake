@@ -5,6 +5,21 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.361.0] — 2026-11-21
+
+**feat(portal): the portal signs in through the shared sign-in box.** The
+last part of decision AM1 (Ambassador Program PRD § 3.1; Doug, 11-21-26:
+"build it now as one shot"). The portal's own sign-in and reset screens are
+gone from `portal/frontend/index.html`; `frontend/shared/signin.js` draws
+both, as it already does on the Ambassador pages, so a change to sign-in is
+made once. Nothing a member sees or does changes: the same fields, Show
+button (out of the tab order, never sticky), "Forgot your password?" and
+messages; the fields keep the ids and names `username` and `password`, so a
+browser's saved password still matches; the sign-in reply still goes to the
+portal's own entry step, so `/?next=` returns, the birthday greeting and the
+new home page work as before. **Not behind a switch**: a push changes the
+sign-in screen on every deployment at once.
+
 ## [0.360.2] — 2026-11-21
 
 **fix(ambassador): Mark done and the review outcomes are stored.** Found by

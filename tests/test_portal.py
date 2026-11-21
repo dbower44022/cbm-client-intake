@@ -287,8 +287,12 @@ def test_forgot_password_needs_no_session(monkeypatch):
 def test_login_page_has_forgot_password_link(monkeypatch):
     with TestClient(_app(monkeypatch)) as c:
         r = c.get("/")
-    assert "Forgot your password?" in r.text
-    assert "forgotForm" in r.text
+    # Since v0.361.0 the portal draws the shared sign-in box, which carries
+    # the link and the reset form.
+    assert "/shared/signin.js" in r.text
+    from pathlib import Path
+    box = Path("frontend/shared/signin.js").read_text(encoding="utf-8")
+    assert "Forgot your password?" in box and '"/forgot-password"' in box
 
 
 # --- SSO: one portal login works in the staff apps ---------------------------
@@ -369,6 +373,21 @@ def test_login_show_button_is_out_of_the_tab_order():
     Sign in; the Show button beside the password is reached by mouse only."""
     import re
     from pathlib import Path
+    # The portal draws the shared sign-in box (v0.361.0): its Show button.
+    box = Path("frontend/shared/signin.js").read_text(encoding="utf-8")
+    btn = re.search(r'var toggle = el\("button", \{[^}]*\}', box)
+    assert btn and 'tabindex: "-1"' in btn.group(0)
     html = Path("portal/frontend/index.html").read_text(encoding="utf-8")
-    btn = re.search(r'<button[^>]*id="pwToggle"[^>]*>', html)
-    assert btn and 'tabindex="-1"' in btn.group(0)
+    assert "/shared/signin.js" in html
+
+
+def test_portal_sign_in_keeps_its_field_names():
+    """A browser's saved password matches on the field names and ids: the
+    shared box names them username and password, and the portal keeps its
+    old ids (v0.361.0)."""
+    from pathlib import Path
+    box = Path("frontend/shared/signin.js").read_text(encoding="utf-8")
+    assert '"username", "username")' in box and '"current-password", "password")' in box
+    app = Path("portal/frontend/app.js").read_text(encoding="utf-8")
+    assert 'ids: { username: "username", password: "password" }' in app
+    assert "onSignedIn: function (data) { enter(data); }" in app
