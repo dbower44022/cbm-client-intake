@@ -1,6 +1,6 @@
 # Build orchestrator — the Integrations tab of System Settings
 
-Last Updated: 11-15-26 13:10 · Revision 0.18 — see change log at the end.
+Last Updated: 11-21-26 23:58 · Revision 0.19 — see change log at the end.
 
 This file runs the whole build of the Integrations tab. It names the phases,
 the prompt for each one, the rules that every phase session follows, and the
@@ -35,7 +35,7 @@ stopping points where the work pauses for Doug. The design is
 | 8 | The wizard, piloted on Zoom (plan § 10, rulings W1 to W6) | `prompts/integrations-tab-phase8-prompt-v0.2.md` | Built v0.331.0, 11-14-26; awaiting the live pilot on crm-test (stopping point 3). (v0.1 is superseded: it becomes phase 11.) |
 | 9 | The Zoom split into Zoom Webinars and Zoom Meetings (plan `prds/events/event-hosting-plan.md`, EH1, EH5, EH7, EH8), then the other integrations' wizard screens | `prompts/integrations-tab-phase9-prompt-v0.2.md` | Built v0.333.0 (the split) and v0.334.0 (every integration's screens), 11-15-26 (pushed 11-15-26); awaiting Doug's review |
 | 10 | The removal of the checklist display, setup plans and fix plans (ruling W4) | `prompts/integrations-tab-phase10-prompt-v0.1.md` | Built v0.335.0, 11-15-26 (pushed 11-15-26); awaiting Doug's review |
-| 11 | Documentation, and the live review on the Business Mentors Association's system (the test system since 11-14-26) | `prompts/integrations-tab-phase11-prompt-v0.1.md` | Prompt approved by Doug 11-15-26; not started |
+| 11 | Documentation, and the live review on the Business Mentors Association's system (the test system since 11-14-26) | `prompts/integrations-tab-phase11-prompt-v0.1.md`; resume with `prompts/integrations-tab-phase11-resume.md` | In progress: part 1 done 11-15-26; live review walked to step 5.1, its findings fixed in v0.336.1 to v0.339.2 (pushed); owed in `OPEN-ITEMS.md` #82 (11a) to (11e) |
 
 The session closing each phase updates the **State** column.
 
@@ -98,6 +98,7 @@ which goes to Doug as a decision.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.19 | 11-21-26 23:58 | Claude (Claude Code) | State column: phase 11 in progress; its resume prompt. |
 | 0.17 | 11-15-26 12:44 | Claude (Claude Code) | Phase 11 prompt approved by Doug. Revision 0.15's change-log row, written into the phase table by mistake, moved here. |
 | 0.16 | 11-15-26 12:42 | Claude (Claude Code) | State column: phase 10 built (v0.335.0); phase 11 prompt drafted, for the Business Mentors Association's system rather than crm-test. |
 | 0.15 | 11-15-26 11:47 | Claude (Claude Code) | Phase 10 prompt approved by Doug. |
