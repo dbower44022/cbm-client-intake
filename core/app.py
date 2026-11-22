@@ -1493,6 +1493,17 @@ def create_app(
         # never catches them. TRAINING_COURSES is read per request: off, both
         # pages answer 404 (decision 11). The pages are shells; every read
         # they make is gated by the API.
+        # The training report (TR5, phase 3), registered before the course
+        # route so "report" is never read as a course id. Its gate is the API's.
+        @app.get("/courses/report", response_class=HTMLResponse, include_in_schema=False)
+        async def course_report_shell() -> HTMLResponse:
+            live = get_settings()
+            if not live.training_courses:
+                raise HTTPException(status_code=404, detail="Not found.")
+            html = render_branding(
+                (COURSES_FRONTEND_DIR / "report.html").read_text(encoding="utf-8"), live)
+            return HTMLResponse(html, headers={"Cache-Control": "no-store"})
+
         @app.get("/courses/{course_id}", response_class=HTMLResponse, include_in_schema=False)
         async def course_page_shell(course_id: str) -> HTMLResponse:
             live = get_settings()

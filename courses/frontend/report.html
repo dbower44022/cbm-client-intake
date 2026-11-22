@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="cbm-org" content="{{org}}" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{{org}} — Training report</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700&family=Roboto+Slab:wght@400;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/shared/tokens.css" />
+  <link rel="stylesheet" href="/shared/panel.css" />
+  <link rel="stylesheet" href="/shared/signin.css" />
+  <link rel="stylesheet" href="/shared/grid.css" />
+  <link rel="stylesheet" href="/shared/splitpane.css" />
+  <link rel="stylesheet" href="/courses/assets/styles.css" />
+</head>
+<body>
+  <!-- The training report (prds/training-app-plan.md TR5, § 5.4; phase 3).
+       Read only. The people are worked out by the server (decision 10). -->
+  <main class="cbm-container tc">
+    <header class="tc__header">
+      <div>
+        <h1>Training report</h1>
+        <p class="tc__sub">Each person's status in a course, and their checkpoint answers. The people listed are everyone who can open one of the course's applications.</p>
+      </div>
+      <div class="tc__user" id="userBar" hidden>
+        <span>Signed in as <strong id="whoName"></strong></span>
+        <a class="cbm-action--second" href="/courses/">My courses</a>
+        <a class="cbm-action--second" href="/">Home</a>
+      </div>
+    </header>
+
+    <div id="signin" hidden></div>
+
+    <section id="msgView" hidden>
+      <p class="tc__error" id="msgText" role="alert"></p>
+      <p><a href="/">Return to the home page</a></p>
+    </section>
+
+    <section id="reportView" hidden>
+      <div class="tr__bar">
+        <label class="tr__pick">Course
+          <select id="coursePick"></select>
+        </label>
+        <button type="button" class="cbm-action--second" id="downloadBtn">Download</button>
+        <span class="tr__msg" id="barMsg" role="status"></span>
+      </div>
+      <p class="tr__counts" id="counts"></p>
+      <div class="tr__split" id="split">
+        <div class="tr__gridbox" id="gridBox">
+          <table class="tr__grid" id="grid">
+            <thead><tr>
+              <th data-col="name">Name</th>
+              <th data-col="teams">Teams</th>
+              <th data-col="status">Status</th>
+              <th data-col="last">Last activity</th>
+              <th data-col="answers" data-sortable="false" title="Opens the person's checkpoint answers">Answers</th>
+            </tr></thead>
+            <tbody id="rows"></tbody>
+          </table>
+          <p id="noneText" hidden>Nobody can open this course's applications yet.</p>
+        </div>
+        <aside class="tr__pane" id="pane" hidden aria-labelledby="paneHead">
+          <div class="tr__panehead">
+            <h2 id="paneHead">Answers</h2>
+            <button type="button" class="cbm-action--quiet" id="paneClose">Close</button>
+          </div>
+          <div id="paneBody"></div>
+        </aside>
+      </div>
+    </section>
+
+    <footer class="cbm-footer">
+      <p>&copy; <span data-cbm-year>2026</span> {{org}}.<span class="cbm-footer__version" data-cbm-version></span></p>
+    </footer>
+  </main>
+
+  <script src="/shared/busy.js"></script>
+  <script src="/shared/textsize.js"></script>
+  <script src="/shared/signin.js"></script>
+  <script src="/shared/grid.js"></script>
+  <script src="/shared/splitpane.js"></script>
+  <script src="/courses/assets/report.js"></script>
+  <script src="/shared/footer.js"></script>
+</body>
+</html>

@@ -1017,6 +1017,10 @@ SETTINGS: tuple[SettingSpec, ...] = (
     _s("system_management_allowed_teams", GROUP_GATES, "System Management", kind="csv",
        help="The team whose members see the activity page (and later System Management functions). Copy the team's name "
             "exactly; administrators always pass."),
+    _s("training_report_allowed_teams", GROUP_GATES, "Training report", kind="csv",
+       help="The team whose members read the training report: each person's status "
+            "in each course, and their checkpoint answers. Copy the team's name "
+            "exactly; administrators always pass."),
     _s("news_publish_allowed_teams", GROUP_GATES, "Chapter News — publishers", kind="csv",
        help="The team whose members write and publish Chapter News. Copy the team's "
             "name exactly; administrators always pass."),

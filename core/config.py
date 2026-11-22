@@ -977,6 +977,9 @@ class Settings(BaseSettings):
     training_signins: str = ""
     # Course ids this deployment hides (TR8), comma-separated.
     training_hidden_courses: str = ""
+    # Who reads the training report, /courses/report (TR5; phase 3).
+    # Administrators always pass.
+    training_report_allowed_teams: str = "Mentor Administration Team"
     # --- F5: the portal calendar (prds/events/CBM_Events_Portal_Calendar_Design.md) ---
     # The rail of upcoming events on the portal home page and the member page
     # behind it. Off by default so crm-test can show it to a real member first:
@@ -1186,6 +1189,10 @@ class Settings(BaseSettings):
     @property
     def assign_allowed_roles_list(self) -> list[str]:
         return [r.strip() for r in self.assign_allowed_roles.split(",") if r.strip()]
+
+    @property
+    def training_report_allowed_teams_list(self) -> list[str]:
+        return [t.strip() for t in self.training_report_allowed_teams.split(",") if t.strip()]
 
     @property
     def training_hidden_courses_set(self) -> frozenset[str]:

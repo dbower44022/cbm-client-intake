@@ -749,7 +749,26 @@ async def home_needs(request: Request) -> dict:
         except Exception as exc:  # noqa: BLE001
             failed("staff", exc)
 
-    _, unread, _ = await asyncio.gather(mentoring(), email(), staff())
+    async def training() -> None:
+        # TR6: the courses due, by the reminder's own rule. Off with the
+        # switch, and quiet where the application has no database.
+        if not settings.training_courses:
+            return
+        try:
+            from courses import service as course_service
+            from courses.store import course_store
+
+            store = course_store(settings)
+            if store is None:
+                return
+            uid = user.get("userId") or ""
+            due = course_service.due_courses(user, settings, await store.completions(uid),
+                                             await store.dismissals(uid))
+            items.extend(needs.course_items(due))
+        except Exception as exc:  # noqa: BLE001
+            failed("courses", exc)
+
+    _, unread, _, _ = await asyncio.gather(mentoring(), email(), staff(), training())
     return {"items": needs.ordered(items), "unreadTotal": unread,
             "unavailable": sorted(unavailable)}
 

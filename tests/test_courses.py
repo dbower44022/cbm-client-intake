@@ -403,7 +403,7 @@ def test_the_migration_creates_the_four_tables():
 
 
 def test_the_pages_follow_the_conventions():
-    for name in ("index.html", "course.html"):
+    for name in ("index.html", "course.html", "report.html"):
         html = (ROOT / "courses" / "frontend" / name).read_text()
         scripts = [line.strip() for line in html.splitlines() if "<script src=" in line]
         assert scripts[0] == '<script src="/shared/busy.js"></script>'
@@ -526,3 +526,154 @@ def test_the_training_script_draws_nothing_it_was_not_told_to():
     assert "disabled" not in js and "position: fixed" not in js
     css = (ROOT / "frontend" / "shared" / "training.css").read_text()
     assert "position: fixed" not in css and "position:fixed" not in css
+
+
+# --- phase 3: the training report (TR5, § 5.4, decision 10) ------------------------------
+
+MARY = {"userId": "u-mary", "userName": "mary", "name": "Mary Admin", "token": "t",
+        "teams": ["Mentor Administration Team"]}
+
+MEMBERS = [
+    {"id": "u-kitty", "name": "Kitty Cat", "userName": "kitty", "teams": ["Client Administration Team"]},
+    {"id": "u-joe", "name": "Joe Mentor", "userName": "joe", "teams": ["Mentor Team"]},
+    {"id": "u-mary", "name": "Mary Admin", "userName": "mary", "teams": ["Mentor Administration Team"]},
+    {"id": "u-sue", "name": "Sue Ops", "userName": "sue", "teams": ["Marketing Admin Team"]},
+    {"id": "u-ann", "name": "Ann Root", "userName": "ann", "teams": ["Board"], "isAdmin": True},
+    {"id": "u-trainee", "name": "Trainee Admin", "userName": "kitty.t",
+     "teams": ["Client Administration Team"]},
+]
+
+
+def _report_client(monkeypatch, tmp_path, user=MARY, members=MEMBERS, **kw):
+    _write_course(tmp_path, cid="small", apps="assignments, mentorsessions")
+    c = _client(monkeypatch, tmp_path, user=user, courses=discover(tmp_path), **kw)
+
+    async def fake_members(settings):
+        return [dict(m) for m in members]
+
+    monkeypatch.setattr("courses.router._members", fake_members)
+    return c
+
+
+def _people(c, course="small"):
+    r = c.get(f"/api/courses/report/people?course={course}")
+    assert r.status_code == 200, r.text
+    return r.json()
+
+
+def test_the_report_gate_is_its_own_setting(monkeypatch, tmp_path, store):
+    from core.settings_registry import SETTINGS
+
+    spec = next(s for s in SETTINGS if s.key == "training_report_allowed_teams")
+    assert spec.kind == "csv"
+    c = _report_client(monkeypatch, tmp_path, user=KITTY)
+    r = c.get("/api/courses/report/courses")
+    assert r.status_code == 403 and "Mentor Administration Team" in r.json()["detail"]
+    assert c.get("/api/courses/mine").json()["reportAllowed"] is False
+    c = _report_client(monkeypatch, tmp_path, user={**KITTY, "isAdmin": True})
+    assert c.get("/api/courses/report/courses").status_code == 200
+    c = _report_client(monkeypatch, tmp_path, user=MARY)
+    assert [x["id"] for x in c.get("/api/courses/report/courses").json()["courses"]] == ["small"]
+    assert c.get("/api/courses/mine").json()["reportAllowed"] is True
+
+
+def test_the_report_is_off_with_the_switch(monkeypatch, tmp_path, store):
+    c = _report_client(monkeypatch, tmp_path, on=False)
+    assert c.get("/api/courses/report/courses").status_code == 404
+    assert c.get("/courses/report").status_code == 404
+
+
+def test_the_report_page_is_its_own_page(monkeypatch, tmp_path, store):
+    c = _report_client(monkeypatch, tmp_path)
+    html = c.get("/courses/report").text
+    assert "Training report" in html and "/courses/assets/report.js" in html
+    js = (ROOT / "courses" / "frontend" / "assets" / "report.js").read_text()
+    assert "CBMGrid.enhance" in js and "CBMSplit.attach" in js and "disabled" not in js
+
+
+def test_who_is_listed_follows_decision_10(monkeypatch, tmp_path, store):
+    c = _report_client(monkeypatch, tmp_path)
+    names = [p["name"] for p in _people(c)["people"]]
+    # Kitty (Client Administration) and Joe (Client Management) open the
+    # course's applications; Ann is an administrator in a team; Mary's
+    # Mentor Administration and Sue's Submission Admin are not the course's.
+    # The training sign-in kitty.t is left out by name.
+    assert names == ["Ann Root", "Joe Mentor", "Kitty Cat"]
+
+
+def test_each_status_and_the_counts(monkeypatch, tmp_path, store):
+    run = asyncio.run
+    c = _report_client(monkeypatch, tmp_path)
+    run(store.save_item("u-joe", "small", "1.0", "1.1"))
+    run(store.dismiss("u-kitty", "small", 1))
+    run(store.complete("u-ann", "Ann Root", "small", "1.0", {}))
+    by = {p["name"]: p for p in _people(c)["people"]}
+    assert by["Joe Mentor"]["words"] == "In progress, 1 of 5"
+    assert by["Kitty Cat"]["words"] == "Dismissed"
+    assert by["Ann Root"]["state"] == "completed"
+    assert by["Ann Root"]["words"].startswith("Completed 1.0 on ")
+    assert by["Ann Root"]["last"] and by["Ann Root"]["lastAt"]
+    assert _people(c)["counts"] == {"completed": 1, "due_again": 0, "in_progress": 1,
+                                   "dismissed": 1, "not_started": 0}
+
+
+def test_due_again_after_a_significant_revision(monkeypatch, tmp_path, store):
+    run = asyncio.run
+    run(store.dismiss("u-kitty", "small", 1))
+    run(store.complete("u-joe", "Joe Mentor", "small", "1.0", {}))
+    _write_course(tmp_path, cid="small", rev="2.0", apps="assignments, mentorsessions")
+    c = _client(monkeypatch, tmp_path, user=MARY, courses=discover(tmp_path))
+
+    async def fake_members(settings):
+        return MEMBERS
+
+    monkeypatch.setattr("courses.router._members", fake_members)
+    by = {p["name"]: p["words"] for p in _people(c)["people"]}
+    assert by["Kitty Cat"] == "Due again" and by["Joe Mentor"] == "Due again"
+
+
+def test_a_completion_stays_after_the_person_leaves(monkeypatch, tmp_path, store):
+    asyncio.run(store.complete("u-gone", "Gone Person", "small", "1.0", {}))
+    asyncio.run(store.save_item("u-sue", "small", "1.0", "1.1"))   # no completion: not listed
+    c = _report_client(monkeypatch, tmp_path)
+    by = {p["name"]: p for p in _people(c)["people"]}
+    assert by["Gone Person"]["note"] == "No longer takes this course"
+    assert by["Gone Person"]["state"] == "completed"
+    assert "Sue Ops" not in by
+
+
+def test_a_persons_answers(monkeypatch, tmp_path, store):
+    c = _report_client(monkeypatch, tmp_path)
+    asyncio.run(store.save_item("u-joe", "small", "1.0", "cp-1", "R-1"))
+    d = c.get("/api/courses/report/answers?course=small&user=u-joe").json()
+    assert d["completions"] == []
+    got = {a["key"]: a["answer"] for a in d["current"]["answers"]}
+    assert got == {"cp-1": "R-1", "cp-2": ""}
+    asyncio.run(store.complete("u-joe", "Joe Mentor", "small", "1.0",
+                               {"cp-1": {"question": "Q1", "section": "1. One", "answer": "R-1"}}))
+    d = c.get("/api/courses/report/answers?course=small&user=u-joe").json()
+    assert d["current"] is None
+    assert d["completions"][0]["revision"] == "1.0"
+    assert d["completions"][0]["answers"][0]["answer"] == "R-1"
+    assert c.get("/api/courses/report/answers?course=nope&user=u-joe").status_code == 404
+
+
+def test_the_download_is_the_statuses_never_the_answers(monkeypatch, tmp_path, store):
+    run = asyncio.run
+    members = MEMBERS + [{"id": "u-eve", "name": "=HYPERLINK(1)", "userName": "eve",
+                          "teams": ["Mentor Team"]}]
+    c = _report_client(monkeypatch, tmp_path, members=members)
+    run(store.complete("u-ann", "Ann Root", "small", "1.0",
+                       {"cp-1": {"question": "Q1", "section": "1", "answer": "SECRET ANSWER"}}))
+    r = c.get("/api/courses/report/download?course=small")
+    assert r.status_code == 200
+    assert r.headers["content-type"].startswith("text/csv")
+    assert 'filename="training-small-' in r.headers["content-disposition"]
+    text = r.text
+    assert text.splitlines()[0] == "Name,Teams,Status,Revision completed,Completed on,Last activity,Note"
+    assert "SECRET ANSWER" not in text
+    assert "'=HYPERLINK(1)" in text
+    r = c.get("/api/courses/report/download?course=small&state=completed")
+    assert [line.split(",")[0] for line in r.text.splitlines()[1:]] == ["Ann Root"]
+    c = _report_client(monkeypatch, tmp_path, user=KITTY)
+    assert c.get("/api/courses/report/download?course=small").status_code == 403

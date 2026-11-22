@@ -61,3 +61,15 @@ async def test_a_dismissal_is_recorded_once_per_significant_revision():
     await store.dismiss("u1", "c", 2)
     await store.dismiss("u2", "c", 1)
     assert sorted(d["major"] for d in await store.dismissals("u1")) == [1, 2]
+
+
+async def test_the_report_reads_one_course_for_everyone():
+    store = await _fresh()
+    await store.save_item("u1", "c", "1.0", "1.1")
+    await store.save_item("u2", "other", "1.0", "1.1")
+    await store.complete("u2", "Joe", "c", "1.0", {"cp-1": {"answer": "R"}})
+    await store.dismiss("u3", "c", 1)
+    got = await store.course_records("c")
+    assert [r["user_id"] for r in got["progress"]] == ["u1"]
+    assert got["completions"][0]["answers"]["cp-1"]["answer"] == "R"
+    assert [d["user_id"] for d in got["dismissals"]] == ["u3"]

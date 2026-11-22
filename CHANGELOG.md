@@ -5,6 +5,46 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.364.0] — 2026-11-21
+
+**feat(courses): Needs you's Course rows and the training report**
+(training application phase 3, `prds/training-app-plan.md` TR5, TR6,
+§ 5.3, § 5.4; dark behind `TRAINING_COURSES`).
+
+- **Needs you** (`HOME_V2`) gains a seventh kind, **Course** (green), last
+  in the order: "Course due: <name>", with its length, or "Due again,
+  revision N.M" and the change log entry. The rows come from
+  `courses/service.due_courses`, the reminder bar's own rule across every
+  application the member can open, never re-decided in the portal. A click
+  opens the course page in the tab the reminder uses. Dismissing or
+  completing the course clears the row. Switch off or no database: no rows;
+  a failed read is named in `unavailable` as `courses`.
+- **The training report**, `/courses/report`, gated by the new setting
+  **`TRAINING_REPORT_ALLOWED_TEAMS`** (default Mentor Administration Team;
+  administrators always pass; Team gates on `/setup`). A course picker, a
+  counts line whose counts filter the grid, one shared grid (name, teams,
+  status, last activity, Answers) and a split pane with one person's
+  checkpoint answers, the question small and grey, the answer dark in a
+  tinted box: each completion with the answers copied in, newest first,
+  then the answers saved so far. Read only.
+- **Who is listed** (decision 10): Chapter News's member rule
+  (`news.service.members`, which now also says whether a member is an
+  administrator), kept to those who can open one of the course's
+  applications by the portal's rule, less the `TRAINING_SIGNINS` usernames.
+  A person with a completion who no longer takes the course stays, marked
+  (announced at stop 3a).
+- **Statuses**: Completed N.M on date; Dismissed (with progress, if any);
+  In progress, x of y; Due again; Not started.
+- **Download** (Doug's option B at stop 3a, 11-21-26): a CSV file,
+  `training-<course>-<MM-DD-YY>.csv`, of the grid's statuses under the
+  active filter. Never the answers. Cells a spreadsheet would read as a
+  formula are quoted.
+- **The link**: the member's course list (`/courses/`) shows *Training
+  report* to those who pass the gate (`GET /api/courses/mine` gives
+  `reportAllowed`).
+- `CourseStore.course_records` reads one course for everyone. No
+  migration. No CRM change.
+
 ## [0.363.1] — 2026-11-21
 
 **test(training): the reminder test course at revision 2.0.** Stop 2,

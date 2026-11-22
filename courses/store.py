@@ -201,6 +201,21 @@ class CourseStore:
                     training_dismissal.c.major == major)))).mappings().first()
         return dict(got)
 
+    async def course_records(self, course_id: str) -> dict[str, list[dict[str, Any]]]:
+        """Everyone's progress, completions and dismissals in one course: the
+        training report's read (TR5, phase 3)."""
+        async with self._engine.begin() as conn:
+            progress = (await conn.execute(select(training_progress).where(
+                training_progress.c.course_id == course_id))).mappings().all()
+            done = (await conn.execute(select(training_completion).where(
+                training_completion.c.course_id == course_id)
+                .order_by(training_completion.c.completed_at.desc()))).mappings().all()
+            dismissed = (await conn.execute(select(training_dismissal).where(
+                training_dismissal.c.course_id == course_id))).mappings().all()
+        return {"progress": [dict(r) for r in progress],
+                "completions": [_completion(r) for r in done],
+                "dismissals": [dict(r) for r in dismissed]}
+
 
 _stores: dict[str, CourseStore] = {}
 #: A test sets this to an in-memory store.

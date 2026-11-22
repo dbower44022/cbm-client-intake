@@ -211,7 +211,7 @@ def _member_row(u: dict[str, Any]) -> Optional[dict[str, Any]]:
         return None
     return {"id": u.get("id"), "name": u.get("name") or u.get("userName") or "",
             "userName": u.get("userName") or "", "teams": sorted(teams),
-            "email": u.get("emailAddress") or ""}
+            "email": u.get("emailAddress") or "", "isAdmin": kind == "admin"}
 
 
 async def members(client) -> list[dict[str, Any]]:

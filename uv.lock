@@ -121,7 +121,7 @@ wheels = [
 
 [[package]]
 name = "cbm-client-intake"
-version = "0.363.1"
+version = "0.364.0"
 source = { virtual = "." }
 dependencies = [
     { name = "alembic" },

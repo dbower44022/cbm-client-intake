@@ -449,3 +449,90 @@ def test_my_email_opens_one_conversation_from_a_link():
     assert "openLinkedConversation();" in js
     # Signing in on the way keeps the link.
     assert '"/myemail/" + location.search' in js
+
+
+# --- training phase 3: the Course kind (TR6, prds/training-app-plan.md § 5.3) ------------
+
+def test_course_rows_are_worded_and_open_the_course_page():
+    rows = needs.course_items([
+        {"id": "small", "title": "A small course", "minutes": 20, "revision": "1.0",
+         "url": "/courses/small", "reminder": {"due": True, "again": False, "change": ""}},
+        {"id": "big", "title": "A big course", "minutes": 0, "revision": "2.0",
+         "url": "/courses/big", "reminder": {"due": True, "again": True, "change": "Step 1.2 rewritten."}},
+    ])
+    by = {r["name"]: r for r in rows}
+    small = by["Course due: A small course"]
+    assert (small["kind"], small["tone"], small["chip"]) == ("course", "green", "Course")
+    assert small["reason"] == "About 20 minutes"
+    assert (small["url"], small["target"]) == ("/courses/small", "cbm-course-small")
+    assert by["Course due: A big course"]["reason"] == "Due again, revision 2.0: Step 1.2 rewritten."
+
+
+def test_course_rows_come_after_every_mentoring_and_staff_row():
+    course = needs.course_items([{"id": "c", "title": "T", "minutes": 5, "revision": "1.0",
+                                  "url": "/courses/c", "reminder": {"due": True}}])
+    staff = needs.staff_items([{"label": "Queue", "count": 9, "url": "/ops/"}])
+    new = needs.new_items([_client("a", "Pending Acceptance")], NOW)
+    got = [r["kind"] for r in needs.ordered(course + staff + new)]
+    assert got == ["new", "staff", "course"]
+
+
+def _courses_on(monkeypatch, tmp_path, apps="mentorsessions"):
+    from courses import service as course_service
+    from courses import store as store_mod
+    from courses.catalog import discover
+    from tests.courses_fakes import MemoryCourseStore
+    from tests.test_courses import _write_course
+
+    _write_course(tmp_path, cid="small", apps=apps)
+    _write_course(tmp_path, cid="other", apps="assignments")
+    found = discover(tmp_path)
+    monkeypatch.setattr(course_service, "catalog", lambda: found)
+    store = MemoryCourseStore()
+    store_mod.use(store)
+    return store
+
+
+def test_a_due_course_is_a_row_and_dismissing_clears_it(monkeypatch, tmp_path):
+    import asyncio
+
+    from courses import store as store_mod
+
+    store = _courses_on(monkeypatch, tmp_path)
+    try:
+        data = _needs(monkeypatch, _standard(), TRAINING_COURSES="true")
+        course = [i for i in data["items"] if i["kind"] == "course"]
+        # Only the course of an application Joe can open (Client Management).
+        assert [c["name"] for c in course] == ["Course due: A small course"]
+        assert data["items"][-1]["kind"] == "course"
+
+        asyncio.run(store.dismiss("u1", "small", 1))
+        data = _needs(monkeypatch, _standard(), TRAINING_COURSES="true")
+        assert not [i for i in data["items"] if i["kind"] == "course"]
+    finally:
+        store_mod.use(None)
+
+
+def test_a_completed_course_is_not_a_row(monkeypatch, tmp_path):
+    import asyncio
+
+    from courses import store as store_mod
+
+    store = _courses_on(monkeypatch, tmp_path)
+    try:
+        asyncio.run(store.complete("u1", "Joe Mentor", "small", "1.0", {}))
+        data = _needs(monkeypatch, _standard(), TRAINING_COURSES="true")
+        assert not [i for i in data["items"] if i["kind"] == "course"]
+    finally:
+        store_mod.use(None)
+
+
+def test_with_training_off_there_are_no_course_rows(monkeypatch, tmp_path):
+    from courses import store as store_mod
+
+    _courses_on(monkeypatch, tmp_path)
+    try:
+        data = _needs(monkeypatch, _standard(), TRAINING_COURSES="false")
+        assert not [i for i in data["items"] if i["kind"] == "course"]
+    finally:
+        store_mod.use(None)

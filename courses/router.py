@@ -26,7 +26,7 @@ from typing import Any, Optional
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
 
-from assignments.auth import current_user
+from assignments.auth import current_user, is_member
 from core.config import Settings, get_settings
 
 from . import service
@@ -117,7 +117,119 @@ async def mine(request: Request, app: str = "") -> dict:
                "forApp": bool(app) and app in course.applications}
         (first if row["forApp"] else rest).append(row)
     return {"user": {"id": _uid(user), "name": _name(user)},
-            "app": app, "courses": first + rest}
+            "app": app, "courses": first + rest,
+            "reportAllowed": is_member(user, settings.training_report_allowed_teams_list)}
+
+
+# --- the training report (TR5, § 5.4; phase 3) -------------------------------------------
+# Two path segments each, so ``GET /{course_id}`` never catches them. Read only;
+# gated by TRAINING_REPORT_ALLOWED_TEAMS (administrators always pass).
+
+REPORT_FORBIDDEN = ("The training report is for the {teams}. Ask an administrator to add "
+                    "you to that team.")
+
+
+def _reporter(request: Request) -> tuple[dict[str, Any], Settings]:
+    user, settings = _member(request)
+    teams = settings.training_report_allowed_teams_list
+    if not is_member(user, teams):
+        raise HTTPException(status_code=403, detail=REPORT_FORBIDDEN.format(
+            teams=" or ".join(teams) or "report team"))
+    return user, settings
+
+
+def _report_course(course_id: str, settings: Settings) -> Course:
+    course = service.courses(settings).get(course_id)
+    if course is None:
+        raise HTTPException(status_code=404, detail=NOT_FOUND)
+    return course
+
+
+async def _members(settings: Settings) -> list[dict[str, Any]]:
+    """Every member, by Chapter News's rule (decision 10), read under the
+    org-wide key: a member's own token cannot list the CRM's users."""
+    from news import service as news_service
+
+    client = news_service.key_client(settings)
+    if client is None:
+        raise HTTPException(status_code=503, detail=(
+            "The training report needs the CRM, which this server does not reach."))
+    return await news_service.members(client)
+
+
+async def _report(course_id: str, settings: Settings) -> dict[str, Any]:
+    from core.espo import EspoError
+
+    store = _store(settings)
+    course = _report_course(course_id, settings)
+    try:
+        members = await _members(settings)
+    except EspoError as exc:
+        log.warning("training report: the member list could not be read: %s", exc)
+        raise HTTPException(status_code=502, detail=(
+            "The list of members could not be read from the CRM just now. Try again in a minute."))
+    return service.report(course, members, await store.course_records(course.id), settings)
+
+
+@router.get("/report/courses")
+async def report_courses(request: Request) -> dict:
+    """The report's course picker: every course this deployment offers."""
+    user, settings = _reporter(request)
+    return {"user": {"id": _uid(user), "name": _name(user)},
+            "courses": [service.summary(c, settings) for c in service.courses(settings).values()]}
+
+
+@router.get("/report/people")
+async def report_people(request: Request, course: str) -> dict:
+    """One course's people and their statuses (decision 10)."""
+    _, settings = _reporter(request)
+    return await _report(course, settings)
+
+
+@router.get("/report/answers")
+async def report_answers(request: Request, course: str, user: str) -> dict:
+    """One person's checkpoint answers in one course."""
+    _, settings = _reporter(request)
+    store = _store(settings)
+    c = _report_course(course, settings)
+    records = await store.course_records(c.id)
+    progress = [r for r in records["progress"] if r["user_id"] == user]
+    completions = [r for r in records["completions"] if r["user_id"] == user]
+    return service.person_answers(c, progress, completions)
+
+
+def _cell(value: Any) -> str:
+    """A CSV cell that a spreadsheet will not read as a formula."""
+    text = str(value or "")
+    return "'" + text if text[:1] in ("=", "+", "-", "@", "\t", "\r") else text
+
+
+@router.get("/report/download")
+async def report_download(request: Request, course: str, state: str = ""):
+    """The grid as a CSV file (Doug's option B at stop 3a, 11-21-26): the
+    statuses only, never the checkpoint answers. ``state`` keeps the rows of
+    the filter the page shows."""
+    import csv
+    import io
+    from datetime import datetime, timezone
+
+    from fastapi.responses import Response
+
+    _, settings = _reporter(request)
+    data = await _report(course, settings)
+    rows = [r for r in data["people"] if not state or r["state"] == state]
+    buf = io.StringIO()
+    out = csv.writer(buf)
+    out.writerow(["Name", "Teams", "Status", "Revision completed", "Completed on",
+                  "Last activity", "Note"])
+    for r in rows:
+        out.writerow([_cell(x) for x in (r["name"], ", ".join(r["teams"]), r["words"],
+                                          r["revision"], r["completedOn"], r["last"], r["note"])])
+    day = datetime.now(timezone.utc).strftime("%m-%d-%y")
+    name = f"training-{data['course']['id']}-{day}.csv"
+    return Response(buf.getvalue(), media_type="text/csv; charset=utf-8",
+                    headers={"Content-Disposition": f'attachment; filename="{name}"',
+                             "Cache-Control": "no-store"})
 
 
 @router.get("/{course_id}")

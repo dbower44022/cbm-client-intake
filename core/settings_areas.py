@@ -159,7 +159,7 @@ AREAS: tuple[Area, ...] = (
     Area(AREA_GATES, (
         _h("Who can open each application",
            "assign_allowed_teams assign_allowed_roles mentor_admin_allowed_teams "
-           "system_management_allowed_teams news_publish_allowed_teams ambassador_allowed_teams ambassador_review_teams mentor_profile_allowed_teams ops_allowed_teams "
+           "system_management_allowed_teams training_report_allowed_teams news_publish_allowed_teams ambassador_allowed_teams ambassador_review_teams mentor_profile_allowed_teams ops_allowed_teams "
            "session_mentor_allowed_teams session_partner_allowed_teams session_sponsor_allowed_teams "
            "workspace_allowed_teams events_allowed_teams campaigns_allowed_teams "
            "analytics_view_allowed_teams analytics_admin_allowed_teams"),

@@ -26,6 +26,10 @@ The kinds, most urgent first (answer 7):
 6. **Staff** (purple): each staff queue with items, after every mentoring
    row, largest count first (answer 7; ruling 3 is kept by the attention
    counts' own team gates).
+7. **Course** (green): a training course due for the member (TR6,
+   prds/training-app-plan.md § 5.3), last of all: training waits, clients
+   do not. Whether a course is due is ``courses.service.due`` alone, never
+   re-decided here; :func:`course_items` only words the rows.
 
 Closing is left out until a planned end date exists (answer 4).
 """
@@ -39,7 +43,8 @@ from datetime import datetime, timedelta, timezone
 from typing import Any, Iterable, Optional
 
 #: Urgency, most urgent first (answer 7).
-RANK = {"nocontact": 0, "notes": 1, "email": 2, "summary": 3, "new": 4, "staff": 5}
+RANK = {"nocontact": 0, "notes": 1, "email": 2, "summary": 3, "new": 4, "staff": 5,
+        "course": 6}
 #: Each kind's chip colour and word (plan § 5.3). No contact's word is the
 #: day count, set per row.
 CHIP = {
@@ -49,6 +54,7 @@ CHIP = {
     "summary": ("navy", "Summary"),
     "new": ("navy", "New"),
     "staff": ("purple", "Staff"),
+    "course": ("green", "Course"),
 }
 #: The statuses the no-contact rule watches (answer 6: never On-Hold).
 NO_CONTACT_STATUSES = ("Active", "Assigned", "Pending Acceptance")
@@ -241,6 +247,26 @@ def staff_items(attention: Iterable[dict[str, Any]]) -> list[dict[str, Any]]:
         label = a.get("label") or "Items awaiting processing"
         out.append(_item("staff", label, f"{n} waiting", {"url": url, "target": target},
                          age=float(n)))
+    return out
+
+
+def course_items(due: Iterable[dict[str, Any]]) -> list[dict[str, Any]]:
+    """``due``: the member's due courses from ``courses.service.due_courses``
+    (``id``, ``title``, ``minutes``, ``url``, ``reminder``). One row each,
+    "Course due: <name>", opening the course page in the tab the in-application
+    reminder uses. A course due again names its change, as the reminder does."""
+    out = []
+    for c in due:
+        reminder = c.get("reminder") or {}
+        minutes = int(c.get("minutes") or 0)
+        length = f"About {minutes} minutes" if minutes else "A training course"
+        if reminder.get("again"):
+            change = (reminder.get("change") or "").strip()
+            reason = f"Due again, revision {c.get('revision')}" + (f": {change}" if change else "")
+        else:
+            reason = length
+        out.append(_item("course", f"Course due: {c['title']}", reason,
+                         {"url": c["url"], "target": f"cbm-course-{c['id']}"}))
     return out
 
 

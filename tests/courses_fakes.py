@@ -73,3 +73,9 @@ class MemoryCourseStore:
                "major": major, "dismissed_at": now or _now()}
         self.dismissed.append(row)
         return dict(row)
+
+    async def course_records(self, course_id: str) -> dict[str, list[dict[str, Any]]]:
+        return {"progress": [dict(r) for r in self.rows if r["course_id"] == course_id],
+                "completions": sorted((dict(r) for r in self.done if r["course_id"] == course_id),
+                                      key=lambda r: r["completed_at"], reverse=True),
+                "dismissals": [dict(r) for r in self.dismissed if r["course_id"] == course_id]}

@@ -1,6 +1,6 @@
 # The training application — plan
 
-Last Updated: 11-21-26 22:34 · Revision 0.8 — see change log at the end.
+Last Updated: 11-21-26 22:49 · Revision 0.9 — see change log at the end.
 
 **Status: reviewed by Doug; phase 1's prompt approved as written 11-21-26**
 (`prompts/training-app-phase-1-prompt-v0.1.md`, revision 1.0); **phase 1 done 11-21-26** (v0.362.0 and v0.362.2; stop 1 passed on the Association). Elicited 11-21-26 from the planning
@@ -402,7 +402,9 @@ separate artifact until it is rewritten as steps or this arc is extended.
   **decided 11-21-26 (Doug, option A)**: beside *Signed in as* in Client
   Administration and Client Management; in a new right-hand corner of
   Mentor Administration's header, so it shows on every view.
-- Whether the report offers a download of its grid (phase 3).
+- ~~Whether the report offers a download of its grid~~ — **decided
+  11-21-26 (Doug, option B)**: a CSV file of the grid's statuses, keeping
+  the active filter; the checkpoint answers stay on screen only.
 - Which courses are mentor onboarding; none exists (phase 4 or later).
 - Whether the events marketing manager course is rewritten as steps (after
   phase 6).
@@ -418,6 +420,7 @@ served by the training application carry one.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.9 | 11-21-26 22:49 | Claude (Claude Code) | Phase 3 built (v0.364.0): the Course kind on Needs you; the training report with its gate, counts that filter, the answers pane and the download (§ 9 decided, option B); its link on the member's course list. Announced at stop 3a: a person with a completion who no longer takes the course stays on the report, marked. |
 | 0.8 | 11-21-26 22:34 | Claude (Claude Code) | Phase 2 done: stop 2 passed on the Association (v0.363.0, v0.363.1). Phase 3's prompt drafted. |
 | 0.7 | 11-21-26 17:17 | Claude (Claude Code) | Phase 2 built (v0.363.0): § 9's button question decided (option A); the test course `training/reminder-test/` at 1.0. |
 | 0.6 | 11-21-26 15:58 | Claude (Claude Code) | Phase 1 done: stop 1 passed on the Association after the fix v0.362.2 (a save refused when the browser's sign-in is not the person the course page was opened for). |

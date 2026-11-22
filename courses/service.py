@@ -113,6 +113,22 @@ def due(course: Course, completions: list[dict[str, Any]],
             "change": course.changes.get(course.revision, "") if earlier else ""}
 
 
+def due_courses(user: dict[str, Any], settings: Settings, completions: list[dict[str, Any]],
+                dismissals: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Every course due for this member, across every application they can
+    open: the home page's Needs you rows (TR6, § 5.3) come from here, by the
+    same rule as the reminder bar. Each is :func:`summary` plus ``reminder``."""
+    routes = routes_for(user, settings)
+    out = []
+    for course in courses(settings).values():
+        if not may_take(course, routes):
+            continue
+        reminder = due(course, completions, dismissals)
+        if reminder["due"]:
+            out.append({**summary(course, settings), "reminder": reminder})
+    return out
+
+
 def summary(course: Course, settings: Settings) -> dict[str, Any]:
     return {"id": course.id, "title": branding.render(course.title, settings, branding.MODE_TEXT),
             "minutes": course.minutes, "revision": course.revision, "draft": course.draft,
@@ -159,3 +175,117 @@ def page(course: Course, settings: Settings) -> dict[str, Any]:
         "html": render.body_html(doc, sub),
         "items": [{"key": i["key"], "kind": i["kind"]} for i in course.items],
     }
+
+
+# --- the training report (TR5, decision 10, § 5.4; phase 3) ------------------------------
+
+#: The report's statuses, in the order the counts line and the status sort use.
+REPORT_STATES = ("completed", "due_again", "in_progress", "dismissed", "not_started")
+REPORT_WORDS = {"completed": "completed", "due_again": "due again",
+                "in_progress": "in progress", "dismissed": "dismissed",
+                "not_started": "not started"}
+
+
+def signin_usernames(settings: Settings) -> frozenset[str]:
+    """The training sign-ins' usernames, left out of the report by name."""
+    return frozenset(u.lower() for _, u, _ in render.parse_signins(settings.training_signins).values())
+
+
+def person_status(course: Course, progress: list[dict[str, Any]],
+                  completions: list[dict[str, Any]],
+                  dismissals: list[dict[str, Any]]) -> dict[str, Any]:
+    """One person's status in one course, as the report shows it. Completed
+    at the current N first; then dismissed at the current N (with any
+    progress); then in progress; then due again (a completion or a
+    dismissal at an earlier N); else not started."""
+    total = len(course.items)
+    done = len(live_progress(course, progress))
+    completion = current_completion(course, completions)
+    stamps = ([r["done_at"] for r in progress] + [c["completed_at"] for c in completions]
+              + [d["dismissed_at"] for d in dismissals if d["course_id"] == course.id])
+    last = max(stamps) if stamps else None
+    if completion:
+        state = "completed"
+        words = f"Completed {completion['revision']} on {_date(completion['completed_at'])}"
+    elif dismissed(course, dismissals):
+        state, words = "dismissed", "Dismissed" + (f", {done} of {total}" if done else "")
+    elif done:
+        state, words = "in_progress", f"In progress, {done} of {total}"
+    elif any(major_of(c["revision"]) < course.major for c in completions) or any(
+            int(d["major"]) < course.major for d in dismissals if d["course_id"] == course.id):
+        state, words = "due_again", "Due again"
+    else:
+        state, words = "not_started", "Not started"
+    return {"state": state, "words": words, "last": last,
+            "revision": completion["revision"] if completion else "",
+            "completedAt": completion["completed_at"] if completion else None}
+
+
+def report(course: Course, members: list[dict[str, Any]], records: dict[str, list[dict[str, Any]]],
+           settings: Settings) -> dict[str, Any]:
+    """The report's rows for one course (decision 10). The people are every
+    member (news.service.members: active regular logins, and administrators
+    in at least one team) who can open one of the course's applications, by
+    the portal's rule, less the training sign-ins by username. Someone with a
+    completion who no longer takes the course stays, marked, so a completion
+    never drops off the record (announced at stop 3a, 11-21-26)."""
+    excluded = signin_usernames(settings)
+    by_user: dict[str, dict[str, list]] = {}
+    for kind in ("progress", "completions", "dismissals"):
+        for r in records.get(kind) or []:
+            by_user.setdefault(r["user_id"], {"progress": [], "completions": [], "dismissals": []})[kind].append(r)
+    known = {m["id"]: m for m in members}
+    people: dict[str, dict[str, Any]] = {}
+    for m in members:
+        if (m.get("userName") or "").lower() in excluded:
+            continue
+        user = {"teams": m.get("teams") or [], "isAdmin": bool(m.get("isAdmin"))}
+        if may_take(course, routes_for(user, settings)):
+            people[m["id"]] = {"name": m["name"], "teams": m.get("teams") or [], "counted": True}
+    for uid, rec in by_user.items():
+        if uid in people or not rec["completions"]:
+            continue
+        m = known.get(uid)
+        if m and (m.get("userName") or "").lower() in excluded:
+            continue
+        name = (m or {}).get("name") or rec["completions"][0].get("user_name") or "A former member"
+        people[uid] = {"name": name, "teams": (m or {}).get("teams") or [], "counted": False}
+    rows = []
+    empty = {"progress": [], "completions": [], "dismissals": []}
+    for uid, p in people.items():
+        rec = by_user.get(uid, empty)
+        st = person_status(course, rec["progress"], rec["completions"], rec["dismissals"])
+        rows.append({
+            "userId": uid, "name": p["name"], "teams": p["teams"],
+            "state": st["state"], "words": st["words"], "rank": REPORT_STATES.index(st["state"]),
+            "revision": st["revision"],
+            "completedOn": _date(st["completedAt"]),
+            "last": _date(st["last"]), "lastAt": st["last"].isoformat() if st["last"] else "",
+            "note": "" if p["counted"] else "No longer takes this course",
+        })
+    rows.sort(key=lambda r: r["name"].lower())
+    counts = {s: sum(1 for r in rows if r["state"] == s) for s in REPORT_STATES}
+    return {"course": summary(course, settings), "people": rows, "counts": counts}
+
+
+def person_answers(course: Course, progress: list[dict[str, Any]],
+                   completions: list[dict[str, Any]]) -> dict[str, Any]:
+    """One person's checkpoint answers: every completion, newest first, with
+    the answers copied in when it was recorded; then the answers saved so far
+    when they have not completed the current revision."""
+    done = []
+    for c in sorted(completions, key=lambda c: c["completed_at"], reverse=True):
+        answers = c.get("answers") or {}
+        done.append({"revision": c["revision"], "date": _date(c["completed_at"]),
+                     "answers": [{"key": k, "question": v.get("question", ""),
+                                  "section": v.get("section", ""), "answer": v.get("answer", "")}
+                                 for k, v in answers.items()]})
+    current = None
+    if not current_completion(course, completions):
+        have = {r["item_key"]: r for r in live_progress(course, progress)}
+        rows = [{"key": i["key"], "question": i["label"], "section": i["section"],
+                 "answer": (have.get(i["key"]) or {}).get("answer") or ""}
+                for i in course.items if i["kind"] == "checkpoint"]
+        if any(r["answer"] for r in rows):
+            current = {"revision": course.revision, "answers": rows}
+    return {"completions": done, "current": current}

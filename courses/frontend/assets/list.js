@@ -71,6 +71,8 @@
       $("otherHeading").hidden = !rest.length;
       $("otherHeading").textContent = first.length ? "Your other courses" : "Your courses";
       $("noneText").hidden = d.courses.length > 0;
+      // The report team's way in (phase 3, stop 3a): shown only to them.
+      $("reportLink").hidden = !d.reportAllowed;
       $("listView").hidden = false;
     }).catch(function (e) {
       if (e.status === 401) {
