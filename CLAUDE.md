@@ -1427,8 +1427,8 @@ the strength of it.
   Association 11-21-26**: training courses phase 2, the Training button and
   the reminder (`frontend/shared/training.js`, after `textsize.js` in every
   application a course lists).
-- **v0.364.0 (2026-11-21) is committed, not pushed**: training courses
-  phase 3, Needs you's Course rows and the training report
-  (`/courses/report`, `TRAINING_REPORT_ALLOWED_TEAMS`). Stop 3, the check
-  on the Association, is owed (#92).
+- **v0.364.0 (2026-11-21) is pushed**: training courses phase 3, Needs
+  you's Course rows and the training report (`/courses/report`,
+  `TRAINING_REPORT_ALLOWED_TEAMS`; training sign-ins never listed, Doug's
+  option A). Stop 3, the check on the Association, is owed (#92).
 Everything else still owed is in `OPEN-ITEMS.md`.
