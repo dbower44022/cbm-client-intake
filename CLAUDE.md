@@ -1138,6 +1138,7 @@ publishing refused.
 | `prds/CBM_Client_Intake_Technical_Design.md` | How it is built — deployment §6, open issues §7, EspoCRM mapping §3 |
 | `prds/v2/` | The V2 reliability platform specs (requirements, technical design, operations guide) |
 | `email-executive-summary.md` | Published to the docs site as the Email Guide — **keep the two in sync** |
+| `business-evaluation-guide.md` | The staff user guide to Business Evaluation and feedback surveys, the whole journey; draft, to be published to the docs site after Doug's review. Its course is `training/evaluation-staff-course/` |
 
 The formal PRDs cover the **client-intake** form and process only; every other
 form, tool and platform arc is documented in this file, the application folders'

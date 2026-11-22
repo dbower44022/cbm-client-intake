@@ -1,6 +1,6 @@
 # evaluation/ — Business Evaluation
 
-Last Updated: 11-21-26 01:01 · Revision 1.9
+Last Updated: 11-21-26 23:02 · Revision 1.10
 
 Detail for the Business Evaluation offering. Claude Code loads this file only
 when a session works in this folder. The plan is
@@ -311,6 +311,21 @@ table names or the `/evaluation/{token}` page, read the engine's equivalent.
   ~/.config/cbm-bma/bma.env --out <folder>`, read only.
 - Tests: `tests/test_evaluation_match.py`.
 
+## Phases 8 and 9: feedback surveys (v0.354.0, checked 11-21-26)
+
+Feedback surveys are the survey engine's second purpose and live in their
+own package, `feedback/` (detail: `feedback/CLAUDE.md`). What touches this
+package: a released round is one of the automatic feedback moments (three
+days after the round's first release, one survey per round), and evaluation
+feedback links to the released `CBusinessEvaluation`. Nothing in
+`evaluation/` imports `feedback/`.
+
+**Guide and course**: `business-evaluation-guide.md` (the staff user
+guide, draft, to be published to the documentation site after Doug's
+review) and `training/evaluation-staff-course/evaluation-demo.md` (the
+staff course, Riverside Candle Co. from a new intake to feedback). Update
+both when a screen in the journey changes.
+
 ## The CRM
 
 `crm-plans/business-evaluation.json` (fingerprint `89d89d28b53b` on crm-test)
@@ -337,3 +352,4 @@ create).
 | 1.7 | 11-19-26 22:35 | Claude (Claude Code) | The tab's answer look (v0.340.1); phase 6 checked. |
 | 1.8 | 11-19-26 23:36 | Claude (Claude Code) | Phase 7, the mentor match (v0.350.0). |
 | 1.9 | 11-21-26 01:01 | Claude (Claude Code) | Phase 7 checked on the Association; the last-new-client date and Assign this mentor from the mentor popup (Doug, 11-20-26). |
+| 1.10 | 11-21-26 23:02 | Claude (Claude Code) | Phases 8 and 9 (feedback surveys) and where they touch this package; the user guide and the staff course. |
