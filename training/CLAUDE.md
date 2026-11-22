@@ -1,6 +1,6 @@
 # training/ — training material for the CBM applications
 
-Last Updated: 11-04-26 10:35 · Revision 1.2
+Last Updated: 11-21-26 22:35 · Revision 1.3
 
 Detail for the training material: where a course lives, the sandbox it is
 delivered on, the audiences it is written for, the names it must use, and the
@@ -55,6 +55,36 @@ method. `CHANGELOG.md` deliberately keeps the old paths, because it is history.
 Treat them as the sandbox training material, not as the template for a
 course: they are two documents covering nine audiences on one sandbox, which is
 where the existing training started, not where a course has to end up.
+
+## Courses served by the application
+
+Since v0.362.0 (training app phase 1, `prds/training-app-plan.md`) a course
+can be served inside the application at `/courses/{id}`, behind
+`TRAINING_COURSES`, with each person's ticks, checkpoint answers and
+completion recorded. The rules for a course folder:
+
+- **Two files**: the Markdown, in the shape `courses/render.py` reads (its
+  docstring describes it), and a `course.yaml` naming `id`, `title`,
+  `minutes`, `markdown` and `applications` (routes, such as `assignments`).
+  The revision is read from the Markdown's `Last Updated` line only.
+- **A change to the N of N.M makes the course due again** for everyone who
+  completed it (TR4); a change to M does not. A course at 0.x is a draft.
+  Record which, and why, in the change log.
+- **Never write the training system's address or a sign-in into a course.**
+  Write `{{training_url}}` and `{{signin:<role>}}`; the values live in
+  System Settings, and the repository is public.
+- **Every checkpoint is worded as something the trainee types.**
+- **The course page stays in a normal window and every exercise sign-in in
+  a private window.** Where the training system is the same site as the
+  course (the Association), one browser holds one sign-in for both; stop 1
+  found saves going in as the exercise login (fixed v0.362.2 by refusing
+  them, but the course must still say so).
+- `scripts/build_runbook.py` still makes the public Claude page from the
+  same Markdown, printing each sign-in as its role's name.
+
+The training system is now the Business Mentors Association's, not crm-test
+(Doug, 11-14-26); the section below still describes crm-test and is
+rewritten in the arc's phase 6.
 
 ## The sandbox reverts every night — a course cannot rely on its own data
 
@@ -149,6 +179,7 @@ sign-in usernames. Do not "helpfully" restore them.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.3 | 11-21-26 22:35 | Claude (Claude Code) | Courses served by the application (training app phase 1, v0.362.0 and v0.362.2): the course folder's two files, the revision rule, the tokens, typed checkpoints, and the normal-window rule found at stop 1. |
 | 1.2 | 11-04-26 10:35 | Claude (Claude Code) | Doug, 11-04-26: the word "programme" is not used. Replaced throughout this folder — the deliverable is a course, and the events sense is the workshops and webinars page, the application's own words. The application still says Programme in four user-visible places; that is `OPEN-ITEMS.md` work, not this file's. |
 | 1.1 | 10-30-26 01:28 | Claude (Claude Code) | `training-guide.md` and `demo-records.md` moved into this folder from the repository root on Doug's ruling, with all 22 references across eight files repointed; `CHANGELOG.md` left carrying the old paths as history. The open question in revision 1.0 is settled. |
 | 1.0 | 10-30-26 01:17 | Claude (Claude Code) | Created, after Doug's ruling 10-30-26 that the training courses live in this repository rather than a separate project folder. Holds the orientation for a training session: what a course is, the nightly sandbox reset constraint, the nine audiences and the non-admin rehearsal rule, the user-facing names, the step standard, and the publish path. The move of `training-guide.md` and `demo-records.md` under this folder is left open. |
