@@ -1422,8 +1422,9 @@ the strength of it.
   package `courses/`, content in `training/`). v0.362.2 refuses a save when
   the browser's sign-in is not the person the course page was opened for
   (409).
-- **v0.363.0 (2026-11-21) is committed, not pushed**: training courses
-  phase 2, the Training button and the reminder (`frontend/shared/training.js`,
-  after `textsize.js` in every application a course lists). Owed: stop 2 on
-  the Association (#92).
+- **v0.363.0 and v0.363.1 (2026-11-21) are pushed; stop 2 passed on the
+  Association 11-21-26**: training courses phase 2, the Training button and
+  the reminder (`frontend/shared/training.js`, after `textsize.js` in every
+  application a course lists). Phase 3's prompt is drafted, awaiting
+  approval (#92).
 Everything else still owed is in `OPEN-ITEMS.md`.
