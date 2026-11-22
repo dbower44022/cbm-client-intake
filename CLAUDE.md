@@ -1381,21 +1381,14 @@ the strength of it.
   owed — raise it with Doug at the start of any session that touches the
   Association** (`OPEN-ITEMS.md` #87); after any restore before then, rerun
   the two scripts in `SANDBOX-RESET.md` § *A second training system*.
-- **v0.341.0 (2026-11-17) is committed, not pushed**: event hosting step
-  4. Zoom Meetings in Events, members-only events included (Doug, option B),
-  plus Other platform's registrations and confirmation. Dark behind
-  `ZOOM_MEETINGS_EVENTS` and `EVENTS_OTHER_PLATFORM`; `events/hosting.py` is
-  the one rule. Owed in #84.
-- **v0.342.0 (2026-11-17) is committed, not pushed**: event hosting step
-  5, the event form. The method on every online event, its line and
-  readiness, defaults per audience, and a check before saving that names the
-  platform, refuses an over-capacity meeting and warns of Zoom overlaps. Owed
-  in #84.
-- **v0.344.0 (2026-11-18) is committed, not pushed**: the Event hosting card
-  on Feature readiness, and the worker reports its switches (plan § 8 items
-  1 and 2; migration 0050). Owed in #84.
-- **v0.347.0 (2026-11-18) is committed, not pushed**: fix buttons on the
-  Event hosting card (plan § 8 item 3). Owed in #84.
+- **v0.341.0–v0.347.0 (2026-11-17/18) are pushed and live** (the
+  Association read 0.347.0 on 11-18-26 02:05): event hosting steps 4 and 5
+  (Zoom Meetings and Other platform in Events, the event form), three fixes
+  found on the step 6 live check (v0.342.1–2), and plan § 8 items 1–3: the
+  worker reports its switches, the Event hosting card on Feature readiness,
+  and its fix buttons. The live check stopped at section 8 (Doug, 11-18-26:
+  build better tools first). Next: the Zoom fix button, never clicked yet.
+  Owed in #84; resume prompt `prompts/event-hosting-step5a-resume.md`.
 - **v0.350.0 (2026-11-19) and its two follow-ups are pushed; phase 7
   checked on the Association 11-20-26**: Business Evaluation's mentor match
   (`MENTOR_MATCH`, off; migration 0051). Phases 8 and 9 run as one session
