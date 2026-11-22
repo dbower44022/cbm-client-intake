@@ -496,6 +496,7 @@ APP_PAGES = {
     "partnersessions": "sessions/frontend/index.html",
     "sponsorsessions": "sessions/frontend/index.html",
     "mentoradmin": "mentoradmin/frontend/index.html",
+    "ambassador": "ambassador/frontend/index.html",
 }
 
 

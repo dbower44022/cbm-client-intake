@@ -1,0 +1,11 @@
+# The Ambassador Program demo as a course served by the application
+# (decisions AM8 and AM10, prds/Ambassador Program/ambassador-program-decisions.md).
+# The revision is read from the Markdown's Last Updated line, never written here.
+id: ambassador-demo
+title: The Ambassador Program — demo
+minutes: 25
+markdown: ambassador-demo.md
+# Ambassador Activity and its review list (TR3).
+applications: [ambassador]
+# The guides the help agent reads (TR11; read from phase 2 of the training app).
+guides: [ambassador-program.md, ambassador-program-overview.md]

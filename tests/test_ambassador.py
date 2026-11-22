@@ -482,6 +482,8 @@ def test_pages_load_busy_first_and_the_sign_in_box():
         html = (ROOT / rel).read_text()
         scripts = [l for l in html.splitlines() if "<script" in l]
         assert "busy.js" in scripts[0] and "textsize.js" in scripts[1], rel
+        if rel == "ambassador/frontend/index.html":
+            assert "training.js" in scripts[2], rel
         assert "/shared/signin.js" in html and 'name="cbm-org"' in html, rel
 
 

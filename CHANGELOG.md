@@ -5,6 +5,21 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.364.1] — 2026-11-21
+
+**docs(ambassador): the overview, the user guide and the demo course.**
+Doug asked (11-21-26) for a functional overview, a user guide and a demo
+script test users can run as a page (decisions AM8 to AM10). New:
+`ambassador-program-overview.md`, for program leaders and the board; the
+user guide `ambassador-program.md`, rewritten in three parts (members, the
+program team, administrators); and the course `training/ambassador-course/`
+(`/courses/ambassador-demo`, 25 minutes, draft 0.1): a member logs a shared
+post, a known contact and a referral with follow-up, corrects a report; the
+program team marks the follow-up done and reads the figures; the member
+sees the answer. The Ambassador Activity page carries the Training button.
+The course needs a training sign-in for the role *Ambassador program team*
+in System Settings. Neither document is published to the docs site yet.
+
 ## [0.364.0] — 2026-11-21
 
 **feat(courses): Needs you's Course rows and the training report**

@@ -1,6 +1,6 @@
 # Ambassador Program — decision record
 
-Last Updated: 11-21-26 02:26 · Revision 0.9
+Last Updated: 11-21-26 23:02 · Revision 0.12
 
 The planning record for building the Ambassador Activity Log into the
 applications, in place of the Google Form proposed in
@@ -223,10 +223,66 @@ All decisions are taken. The PRD is
 `prds/Ambassador Program/ambassador-program-prd.md`; its § 14 lists the
 additions awaiting Doug's confirmation.
 
+### AM8 — Where the demo script lives (approved 11-21-26)
+
+Doug asked (11-21-26) for a functional overview, a user guide, and a demo
+script test users can run, as a web page that is easy to reach. Option A: the
+demo script is a **course in the training application** (`/courses/<id>`,
+v0.362.0, `training/CLAUDE.md`): ticks and checkpoint answers recorded,
+sign-ins and the system's address filled in from System Settings, never
+written into the page. Shown where `TRAINING_COURSES` is on (the
+Association today).
+
+Cost accepted: the course follows the training application's format, which
+another session is still building (phase 2 next).
+
+
+
+### AM9 — The overview and the guide (approved 11-21-26)
+
+Option A: two documents in the repository, both published to the public
+docs site and registered in `scripts/publish_docs.py` (drift checked):
+
+- **The functional overview**, for program leaders and the board: purpose,
+  who does what, what happens to a report, what is credited, what is
+  measured.
+- **The user guide**, in two parts: members (logging, correcting, My
+  activity) and the program team (the review list, follow-ups, the
+  figures). The course names it under `guides:`, so its help agent (TR11)
+  reads it.
+
+Cost accepted: two documents to keep current; the docs site is public, so
+neither names a sign-in or an `@cbmentors.org` address, and each publish
+needs Doug's OK.
+
+Settled later: the titles, the docs-site book, and whether the short
+`ambassador-program.md` becomes the user guide.
+
+### AM10 — What the demo walks through (approved 11-21-26)
+
+Option A: one course, both sides, about 25 minutes, on the training system
+with the training sign-ins (the training application's TR7): as Joe Mentor,
+a shared post, a known contact, a referral with follow-up, and a
+correction; as the program team, the follow-up marked done and the
+Analytics page; then the member reads the answer. Every invented name
+carries the tester's initials.
+
+Cost accepted: a second training sign-in, for the role *Ambassador program
+team* (Mark Marketing on the Association), added at System Settings;
+testers share Joe Mentor; the review list holds every tester's rows.
+
+Built 11-21-26 (v0.364.1): `training/ambassador-course/` (course id
+`ambassador-demo`), `ambassador-program-overview.md` and the user guide
+`ambassador-program.md` (the short note became the guide). The referral's
+applied half is described in the overview, not walked through.
+
 ## Change log
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 0.12 | 11-21-26 23:02 | Claude (Claude Code) | AM10 recorded as approved, and the three deliverables built. |
+| 0.11 | 11-21-26 22:57 | Claude (Claude Code) | AM9 (overview and guide, published) recorded as approved. |
+| 0.10 | 11-21-26 22:39 | Claude (Claude Code) | AM8 (the demo script is a training course) recorded as approved. |
 | 0.9 | 11-21-26 02:26 | Claude (Claude Code) | AM7 recorded as approved, option A; PRD revision 0.1 written. |
 | 0.8 | 11-21-26 02:22 | Claude (Claude Code) | AM6 recorded as approved, option C; review team default announced. |
 | 0.7 | 11-21-26 02:20 | Claude (Claude Code) | AM5a (partner and funder referral) recorded as approved, option A. |

@@ -1132,7 +1132,7 @@ publishing refused.
 | `submission-admin.md` | `/ops` work queue, resolution workflow, conversations |
 | `analytics-guide.md` / `ANALYTICS-SETUP.md` | Analytics user guide / activation runbook |
 | `event-administration.md` / `EVENTS-SETUP.md` | Events staff guide / activation + 20-min test script |
-| `ambassador-program.md` / `ambassador-activity-crm-handoff.md` | Ambassador Program staff guide / its CRM build |
+| `ambassador-program-overview.md` / `ambassador-program.md` / `ambassador-activity-crm-handoff.md` | Ambassador Program: how it works (leaders, board) / user guide (members, program team, administrators) / its CRM build. Demo course: `training/ambassador-course/` |
 | `GDRIVE-DOCS-SETUP.md`, `GCAL-GOOGLE-SETUP.md`, `GMAIL-INTEGRATION-GUIDE.md` | Google integration activation runbooks |
 | `prds/CBM_Client_Intake_Requirements_Specification.md` | What the client-intake process must do (the formal spec) |
 | `prds/CBM_Client_Intake_Technical_Design.md` | How it is built — deployment §6, open issues §7, EspoCRM mapping §3 |
