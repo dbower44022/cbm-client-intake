@@ -1414,9 +1414,13 @@ the strength of it.
 - **v0.356.5 (2026-11-20) is live everywhere** (pushed 11-20-26 23:23): an
   invented training address gets a plain calendar note. Owed: the check as
   Joe Mentor on the Association (a Completed session with a next date).
-- **v0.360.0 (2026-11-21) is pushed** (11-21-26; the Association's `/healthz` and served `/ambassador/app.js` read 10:49): the Ambassador
-  Program, dark behind `AMBASSADOR_PROGRAM`; its CRM build is applied on
-  the Association's CRM only (11-21-26). Owed in #91.
+- **v0.360.0 to v0.364.1 (2026-11-21) are pushed; the Ambassador Program is
+  live and checked on the Association** (switch on there, off in production):
+  Doug's runbook passed after v0.360.1 and v0.360.2, the referral's applied
+  half passed, the portal's shared sign-in (v0.361.0) passed; the overview,
+  the user guide and the demo course (v0.364.1). CRM build on the
+  Association's CRM and crm-test only. Owed in #91; resume prompt
+  `prompts/ambassador-resume-prompt.md`.
 - **v0.362.0 and v0.362.2 (2026-11-21) are pushed; stop 1 passed on the
   Association 11-21-26**: training courses phase 1, the course page
   (`TRAINING_COURSES`, off in production; migration `0054_training_courses`;
