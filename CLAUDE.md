@@ -1425,6 +1425,6 @@ the strength of it.
 - **v0.363.0 and v0.363.1 (2026-11-21) are pushed; stop 2 passed on the
   Association 11-21-26**: training courses phase 2, the Training button and
   the reminder (`frontend/shared/training.js`, after `textsize.js` in every
-  application a course lists). Phase 3's prompt is drafted, awaiting
-  approval (#92).
+  application a course lists). Phase 3's prompt is approved, not
+  started (#92).
 Everything else still owed is in `OPEN-ITEMS.md`.

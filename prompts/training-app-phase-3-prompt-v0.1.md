@@ -1,8 +1,8 @@
 # Kickoff prompt — the training application, phase 3: Needs you and the training report
 
-Last Updated: 11-21-26 22:33 · Revision 0.1 — see change log at the end.
+Last Updated: 11-21-26 22:32 · Revision 1.0 — see change log at the end.
 
-**Draft for Doug's approval.** Once approved, start a fresh Claude Code
+**Approved by Doug as written, 11-21-26.** Start a fresh Claude Code
 session rooted in `~/Dropbox/Projects/cbm-client-intake`, tell it to read
 this file, and tell it to follow everything below the line.
 
@@ -82,4 +82,5 @@ a private window. Wait for his result before closing the phase.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.0 | 11-21-26 22:32 | Doug | Approved as written. |
 | 0.1 | 11-21-26 22:33 | Claude (Claude Code) | Drafted at the close of phase 2 (stop 2 passed 11-21-26). |
