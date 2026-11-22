@@ -5,6 +5,13 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 deploy marker on App Platform.
 
 
+## [0.363.1] — 2026-11-21
+
+**test(training): the reminder test course at revision 2.0.** Stop 2,
+section 5: a significant revision makes the course due again for those who
+dismissed it at 1.0, and the returning reminder shows the 2.0 change log
+entry. Sections 1 to 4 of stop 2 passed on the Association (Doug, 11-21-26).
+
 ## [0.363.0] — 2026-11-21
 
 **feat(courses): the Training button and the course reminder** (training

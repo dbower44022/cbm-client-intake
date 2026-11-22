@@ -1,6 +1,6 @@
 # Training reminder test
 
-Last Updated: 11-21-26 17:00 · Revision 1.0 — see change log at the end.
+Last Updated: 11-21-26 22:13 · Revision 2.0 — see change log at the end.
 
 A two-minute test course. It exists so the Training button's reminder can be checked on the training system: it is listed in Client Administration, Client Management and Mentor Administration, and its revision number is raised to test a course that comes due again. It teaches nothing. Every other deployment hides it with the System Settings entry *Hidden training courses*.
 
@@ -18,4 +18,5 @@ A two-minute test course. It exists so the Training button's reminder can be che
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 2.0 | 11-21-26 22:13 | Claude (Claude Code) | Raised to 2.0 to test a course that comes due again (stop 2, section 5). Nothing else changed. |
 | 1.0 | 11-21-26 17:00 | Claude (Claude Code) | Written for stop 2 of the training application's phase 2: one step and one checkpoint, at 1.0 so it can come due. |
